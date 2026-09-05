@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "job-autopilot": {
+      "command": "./scripts/job-autopilot-mcp",
+      "args": []
+    }
+  }
+}

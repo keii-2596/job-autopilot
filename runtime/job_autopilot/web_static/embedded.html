@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Job Autopilot</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17352b;
+      --muted: #67736e;
+      --line: rgba(26, 56, 45, .12);
+      --paper: #f7f4ec;
+      --card: rgba(255, 255, 255, .82);
+      --accent: #ff7457;
+      --green: #1f6b50;
+      --lime: #dff05a;
+      --shadow: 0 18px 44px rgba(32, 57, 48, .12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 300px;
+      background:
+        radial-gradient(circle at 90% 5%, rgba(223, 240, 90, .28), transparent 26%),
+        radial-gradient(circle at 5% 90%, rgba(255, 116, 87, .16), transparent 24%),
+        var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { max-width: 880px; margin: 0 auto; padding: 18px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 24px;
+      border-radius: 26px;
+      color: #f8fbf8;
+      background: linear-gradient(135deg, #123b2e 0%, #1d634b 65%, #2a7b5c 100%);
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 210px;
+      height: 210px;
+      right: -68px;
+      top: -90px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(255,255,255,.04), 0 0 0 62px rgba(255,255,255,.025);
+    }
+    .hero-top, .section-head, .run-row, .actions, .stat-row { display: flex; align-items: center; }
+    .hero-top, .section-head, .run-row { justify-content: space-between; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.02em; }
+    .mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: var(--lime); color: #18372c; }
+    .mode {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.18);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 { max-width: 560px; margin: 24px 0 8px; font-size: clamp(28px, 5vw, 46px); line-height: 1.04; letter-spacing: -.045em; }
+    .hero p { max-width: 560px; margin: 0; color: rgba(255,255,255,.72); line-height: 1.55; }
+    .run-row { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.16); }
+    .run-copy { min-width: 0; }
+    .run-copy small, .run-copy strong { display: block; }
+    .run-copy small { margin-bottom: 4px; color: rgba(255,255,255,.6); font-size: 11px; letter-spacing: .11em; }
+    .run-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .run-state { flex: 0 0 auto; padding: 8px 11px; border-radius: 10px; background: var(--lime); color: #18372c; font-size: 11px; font-weight: 900; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+    .stat, .panel { border: 1px solid var(--line); background: var(--card); box-shadow: 0 10px 28px rgba(32, 57, 48, .06); }
+    .stat { min-height: 88px; padding: 15px; border-radius: 18px; }
+    .stat span { display: block; color: var(--muted); font-size: 12px; }
+    .stat strong { display: block; margin-top: 8px; font-size: 26px; letter-spacing: -.04em; }
+    .grid { display: grid; grid-template-columns: 1.16fr .84fr; gap: 12px; }
+    .panel { padding: 18px; border-radius: 22px; }
+    .panel h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+    .section-head small { color: var(--muted); }
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    label.full { grid-column: 1 / -1; }
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+      background: rgba(255,255,255,.76);
+      color: var(--ink);
+    }
+    input:focus, select:focus { border-color: rgba(31,107,80,.55); box-shadow: 0 0 0 3px rgba(31,107,80,.09); }
+    .actions { flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 13px;
+      color: var(--ink);
+      background: #e8ece9;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .button.primary { color: white; background: var(--green); }
+    .button.warm { color: #4a1d12; background: #ffb39f; }
+    .button.quiet { border: 1px solid var(--line); background: transparent; }
+    .button:disabled { cursor: not-allowed; opacity: .52; }
+    .profile-ring {
+      display: grid;
+      place-items: center;
+      width: 88px;
+      height: 88px;
+      margin: 18px auto 12px;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) var(--profile-progress, 0%), #e6e8e4 0);
+      position: relative;
+    }
+    .profile-ring::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: #fbfaf6; }
+    .profile-ring strong { position: relative; z-index: 1; font-size: 20px; }
+    .profile-copy { text-align: center; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .profile-copy strong { color: var(--ink); }
+    .field-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .field-chips span { padding: 6px 8px; border-radius: 9px; background: #eef1eb; color: #52605a; font-size: 11px; }
+    .jobs { margin-top: 12px; }
+    .job { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .job strong, .job small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job small { color: var(--muted); }
+    .job em { align-self: center; padding: 5px 7px; border-radius: 8px; background: #eff1eb; color: var(--green); font-size: 10px; font-style: normal; font-weight: 800; }
+    .activity { margin-top: 12px; }.activity-list { margin-top: 10px; }.activity-item { display: grid; grid-template-columns: 9px 1fr auto; gap: 7px 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }.activity-item i { width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: var(--green); }.activity-item.waiting i { background: var(--accent); animation: activity-pulse 1.4s infinite; }.activity-item strong { font-size: 12px; }.activity-item small { grid-column: 2 / -1; color: var(--muted); font-size: 10px; line-height: 1.45; }.activity-item time { color: var(--muted); font-size: 9px; white-space: nowrap; }@keyframes activity-pulse { 50% { opacity: .3; } }
+    .notice { min-height: 22px; margin: 10px 2px 0; color: var(--muted); font-size: 12px; }
+    .notice.error { color: #b1422c; }
+    .guard { margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(223,240,90,.28); color: #40513c; font-size: 12px; line-height: 1.5; }
+    .approval { margin: 12px 0; padding: 18px; border: 1px solid rgba(181,124,22,.32); border-radius: 20px; background: linear-gradient(135deg, #fff1cf, #fffdf6); box-shadow: var(--shadow); }
+    .approval[hidden] { display: none; }
+    .approval h2 { margin: 0 0 6px; font-size: 17px; }.approval > p { margin: 0 0 14px; color: #725b35; font-size: 12px; line-height: 1.5; }.approval-form { display: grid; gap: 10px; }.approval-form label { color: #4f3b1e; }.approval-options { display: flex; flex-wrap: wrap; gap: 7px; }.approval-option { display: inline-flex; grid-template-columns: auto 1fr; align-items: center; gap: 6px; padding: 8px 9px; border: 1px solid rgba(114,91,53,.18); border-radius: 10px; background: rgba(255,255,255,.6); }.approval-option input { width: auto; }.approval-actions { display: flex; justify-content: flex-end; gap: 8px; }.button.approve { color: white; background: #826018; }.button.decline { color: #6b351d; background: #f5ded1; }
+    .standalone-link { display: none; }
+    body.standalone .standalone-link { display: inline-flex; }
+    @media (max-width: 680px) {
+      .app { padding: 10px; }
+      .hero { padding: 20px; border-radius: 22px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .form { grid-template-columns: 1fr; }
+      label.full { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="brand"><span class="mark">JA</span><span>Job Autopilot</span></div>
+        <span class="mode" id="mode">正在连接</span>
+      </div>
+      <h1>从这里发起，<br>Codex 自动接手后续。</h1>
+      <p>独立网页会直接启动长期 Job Autopilot 任务；岗位判断、语义填表、浏览器操作和投递记录都在这里持续同步。</p>
+      <div class="run-row">
+        <div class="run-copy"><small>当前任务</small><strong id="run-message">正在读取本地账本…</strong></div>
+        <span class="run-state" id="run-state">LOADING</span>
+      </div>
+    </section>
+
+    <section class="approval" id="codex-approval" hidden>
+      <h2>需要你的确认</h2>
+      <p id="approval-message"></p>
+      <form class="approval-form" id="approval-form"></form>
+    </section>
+
+    <section class="stats">
+      <article class="stat"><span>27秋招职位库</span><strong id="total-count">—</strong></article>
+      <article class="stat"><span>待处理</span><strong id="queue-count">—</strong></article>
+      <article class="stat"><span>待确认</span><strong id="review-count">—</strong></article>
+      <article class="stat"><span>已投递</span><strong id="submitted-count">—</strong></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="section-head"><h2>启动一轮任务</h2><small>AI 编排</small></div>
+        <form class="form" id="start-form">
+          <label>岗位关键词<input name="keywords" value="Agent, 后端" placeholder="Agent, 后端"></label>
+          <label>期望地点<input name="locations" placeholder="上海, 杭州"></label>
+          <label>招聘类型
+            <select name="recruitment_type">
+              <option value="campus">校招</option>
+              <option value="intern">实习</option>
+              <option value="social">社招</option>
+            </select>
+          </label>
+          <label>执行方式
+            <select name="action">
+              <option value="discover_and_apply">找岗并推进</option>
+              <option value="process_queue">继续现有队列</option>
+            </select>
+          </label>
+          <div class="actions full">
+            <button class="button primary" type="submit">启动并交给 Codex</button>
+            <button class="button warm" id="resume-button" type="button">AI 解析简历</button>
+            <button class="button quiet" id="pause-button" type="button">暂停</button>
+          </div>
+        </form>
+        <div class="notice" id="notice" role="status"></div>
+        <div class="guard">最终提交、敏感信息传输、验证码和新的诚信声明仍会停下来向你确认。</div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head"><h2>资料准备度</h2><button class="button quiet" id="refresh-button" type="button">刷新</button></div>
+        <div class="profile-ring" id="profile-ring"><strong id="profile-progress">—</strong></div>
+        <div class="profile-copy" id="profile-copy">正在检查必填资料…</div>
+        <div class="field-chips" id="field-chips"></div>
+        <div class="actions">
+          <a class="button quiet standalone-link" href="/">打开完整控制台</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel activity">
+      <div class="section-head"><h2>实时进展</h2><small id="activity-source">共享活动流</small></div>
+      <div class="activity-list" id="activity-list"></div>
+    </section>
+
+    <section class="panel jobs">
+      <div class="section-head"><h2>最近岗位</h2><small id="jobs-meta">共享本地账本</small></div>
+      <div id="jobs-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const hosted = window.parent !== window || Boolean(window.openai);
+    const pending = new Map();
+    let nextRequestId = 1;
+    let currentState = null;
+    document.body.classList.toggle("standalone", !hosted);
+    document.querySelector("#mode").textContent = hosted ? "Codex 嵌入模式" : "独立控制台";
+
+    const split = (value) => String(value || "").split(/[,，]/).map((item) => item.trim()).filter(Boolean);
+    const esc = (value = "") => String(value)
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+
+    function setNotice(message, error = false) {
+      const target = document.querySelector("#notice");
+      target.textContent = message;
+      target.classList.toggle("error", error);
+    }
+
+    async function fetchJson(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || `请求失败：${response.status}`);
+      return payload;
+    }
+
+    function normalizeStandalone(applications, sourceJobsSummary, profile, settings, automation, profileImport, codex, activity) {
+      const required = ["name", "phone", "email", "school", "degree", "major", "graduation_year", "resume_path"];
+      const missing = required.filter((key) => !profile[key]);
+      const byStatus = {};
+      applications.forEach((item) => { byStatus[item.status] = (byStatus[item.status] || 0) + 1; });
+      return {
+        summary: { total: applications.length, by_status: byStatus },
+        source_jobs_summary: sourceJobsSummary,
+        automation,
+        codex,
+        activity,
+        applications: applications.slice(0, 40),
+        profile: {
+          filled_required: required.length - missing.length,
+          required_total: required.length,
+          missing,
+          resume_configured: Boolean(profile.resume_path),
+          custom_fields: (profile.custom_fields || []).map(({ id, key, label, aliases, scope }) => ({ id, key, label, aliases, scope })),
+        },
+        profile_import: {
+          status: profileImport.status || "idle",
+          message: profileImport.message || "",
+          suggestion_count: (profileImport.suggestions || []).length,
+        },
+        settings: {
+          submission_mode: settings.submission_mode || "review",
+          allowed_domains_count: (settings.allowed_domains || []).length,
+        },
+      };
+    }
+
+    function extractState(result) {
+      return result?._meta?.jobAutopilotState || result?.structuredContent || result?.jobAutopilotState || result;
+    }
+
+    function bridgeRequest(method, params) {
+      const id = nextRequestId++;
+      window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error("Codex 组件桥接超时，请刷新后重试"));
+        }, 20000);
+        pending.set(id, { resolve, reject, timer });
+      });
+    }
+
+    async function callTool(name, args = {}) {
+      if (!hosted) {
+        if (name === "get_job_autopilot_state") {
+          const [applications, sourceJobsSummary, profile, settings, automation, profileImport, codex, activity] = await Promise.all([
+            fetchJson("/api/applications"), fetchJson("/api/source-jobs/summary"), fetchJson("/api/profile"), fetchJson("/api/settings"),
+            fetchJson("/api/automation"), fetchJson("/api/profile/import"), fetchJson("/api/codex"), fetchJson("/api/activity"),
+          ]);
+          return normalizeStandalone(applications, sourceJobsSummary, profile, settings, automation, profileImport, codex, activity);
+        }
+        if (name === "start_job_autopilot") {
+          await fetchJson("/api/automation/start", {
+            method: "POST",
+            body: JSON.stringify({
+              action: args.action || "process_queue",
+              criteria: {
+                keywords: args.keywords || [],
+                locations: args.locations || [],
+                recruitment_type: args.recruitment_type || "campus",
+              },
+            }),
+          });
+          return callTool("get_job_autopilot_state");
+        }
+        if (name === "pause_job_autopilot") {
+          await fetchJson("/api/automation/stop", { method: "POST", body: "{}" });
+          return callTool("get_job_autopilot_state");
+        }
+        if (name === "request_resume_parse") {
+          const profile = await fetchJson("/api/profile");
+          if (!profile.resume_path) throw new Error("请先在完整控制台保存简历绝对路径");
+          await fetchJson("/api/profile/resume-request", {
+            method: "POST",
+            body: JSON.stringify({ resume_path: profile.resume_path }),
+          });
+          return callTool("get_job_autopilot_state");
+        }
+        throw new Error(`独立控制台暂不支持工具：${name}`);
+      }
+      if (window.openai?.callTool) return window.openai.callTool(name, args);
+      return bridgeRequest("tools/call", { name, arguments: args });
+    }
+
+    async function sendFollowUp(prompt) {
+      if (!hosted) {
+        return;
+      }
+      if (window.openai?.sendFollowUpMessage) {
+        await window.openai.sendFollowUpMessage({ prompt });
+        return;
+      }
+      await bridgeRequest("ui/message", {
+        role: "user",
+        content: [{ type: "text", text: prompt }],
+      });
+    }
+
+    function render(state) {
+      if (!state || !state.summary) return;
+      currentState = state;
+      const counts = state.summary.by_status || {};
+      const queue = ["discovered", "queued", "opened", "auth_required", "form_filling"]
+        .reduce((sum, key) => sum + Number(counts[key] || 0), 0);
+      document.querySelector("#total-count").textContent = state.source_jobs_summary?.total || 0;
+      document.querySelector("#queue-count").textContent = queue;
+      document.querySelector("#review-count").textContent = counts.ready_for_review || 0;
+      document.querySelector("#submitted-count").textContent = counts.submitted || 0;
+
+      const runtime = state.codex || {};
+      const automation = state.automation || {};
+      const activity = state.activity?.current;
+      const run = activity || (runtime.state ? runtime : automation);
+      document.querySelector("#run-state").textContent = String(run.state || "idle").toUpperCase();
+      document.querySelector("#run-message").textContent = run.message || ({
+        idle: "尚未启动",
+        requested: "正在启动 Codex",
+        starting: "正在准备后台任务",
+        running: "Codex 正在处理",
+        waiting: "需要你的确认",
+        awaiting_input: "需要你的确认",
+        paused: "已暂停，可以继续",
+        completed: "上一轮已完成",
+        failed: "上一轮需要处理",
+      }[run.state] || "尚未启动");
+      const active = ["requested", "starting", "running", "waiting", "awaiting_input"].includes(run.state);
+      const externalStandaloneRun = Boolean(!hosted && activity && active && activity.source !== "web_app_server");
+      const pauseButton = document.querySelector("#pause-button");
+      pauseButton.disabled = externalStandaloneRun;
+      pauseButton.title = externalStandaloneRun ? "这个任务由另一个 Codex 对话执行，请在对应对话中暂停" : "";
+      renderApproval(runtime.pending_request);
+      renderActivity(state.activity);
+
+      const profile = state.profile || {};
+      const total = Number(profile.required_total || 0);
+      const filled = Number(profile.filled_required || 0);
+      const percent = total ? Math.round(filled / total * 100) : 0;
+      document.querySelector("#profile-progress").textContent = `${percent}%`;
+      document.querySelector("#profile-ring").style.setProperty("--profile-progress", `${percent}%`);
+      const missing = profile.missing || [];
+      const importState = state.profile_import || {};
+      document.querySelector("#profile-copy").innerHTML = missing.length
+        ? `已完成 <strong>${filled}/${total}</strong> 项，仍缺 ${esc(missing.join("、"))}`
+        : `基础资料已完成；已学习 <strong>${(profile.custom_fields || []).length}</strong> 个扩展字段。`;
+      const chips = (profile.custom_fields || []).slice(0, 5).map((field) => `<span>${esc(field.label)}</span>`);
+      if (importState.status === "ready_for_review") chips.unshift(`<span>${importState.suggestion_count} 项简历建议待确认</span>`);
+      document.querySelector("#field-chips").innerHTML = chips.join("") || "<span>尚无扩展字段</span>";
+
+      const statuses = {
+        discovered: "新发现", queued: "待处理", opened: "已打开", auth_required: "需登录",
+        form_filling: "填写中", ready_for_review: "待确认", submitted: "已投递", failed: "失败",
+        ignored: "已忽略", withdrawn: "已撤回",
+      };
+      const applications = (state.applications || []).slice(0, 6);
+      document.querySelector("#jobs-list").innerHTML = applications.length ? applications.map((item) => `
+        <div class="job">
+          <strong>${esc(item.title)}</strong><em>${esc(statuses[item.status] || item.status)}</em>
+          <small>${esc(item.company)}${item.locations?.length ? ` · ${esc(item.locations.join("、"))}` : ""}</small>
+        </div>
+      `).join("") : '<div class="profile-copy">还没有岗位。可以从上方启动一次校招搜索。</div>';
+    }
+
+    function renderActivity(activity) {
+      const current = activity?.current;
+      const events = activity?.events || [];
+      const sources = { web_app_server: "网页启动", mcp_conversation: "嵌入式对话", codex_conversation: "Codex 对话" };
+      const stages = {
+        preparing: "准备中", discovering: "正在找岗", screening: "筛选岗位", queueing: "整理队列",
+        opening: "访问官网", authenticating: "登录中", filling: "填写资料", uploading: "上传简历",
+        reviewing: "检查表单", awaiting_confirmation: "等待确认", submitting: "提交中",
+        completed: "已完成", failed: "失败",
+      };
+      document.querySelector("#activity-source").textContent = current ? (sources[current.source] || current.source) : "共享活动流";
+      document.querySelector("#activity-list").innerHTML = events.length ? events.slice(0, 8).map((item) => {
+        const progress = item.progress_total ? `${item.progress_current}/${item.progress_total} · ` : "";
+        const job = item.application_title ? `${esc(item.application_title)}${item.application_company ? ` · ${esc(item.application_company)}` : ""} · ` : "";
+        return `<div class="activity-item ${item.state === "waiting" ? "waiting" : ""}"><i></i><strong>${esc(item.message || stages[item.stage] || "进度已更新")}</strong><time>${formatActivityTime(item.created_at)}</time><small>${progress}${job}${esc(stages[item.stage] || item.stage)}</small></div>`;
+      }).join("") : '<div class="profile-copy">从任意 Codex 对话运行插件后，进展会自动显示在这里。</div>';
+    }
+
+    function formatActivityTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isNaN(date.valueOf()) ? "" : new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(date);
+    }
+
+    function renderApproval(request) {
+      const panel = document.querySelector("#codex-approval");
+      panel.hidden = !request || hosted;
+      if (!request || hosted) return;
+      document.querySelector("#approval-message").textContent = request.message || "确认后 Codex 才能继续。";
+      const form = document.querySelector("#approval-form");
+      if (request.kind === "user_input") {
+        form.innerHTML = (request.params?.questions || []).map((question) => {
+          const options = question.options || [];
+          const type = "radio";
+          const control = options.length ? `<div class="approval-options">${options.map((option, index) => {
+            const label = typeof option === "string" ? option : (option.label || option.value || "");
+            return `<label class="approval-option"><input type="${type}" name="${esc(question.id)}" value="${esc(label)}" ${index === 0 && type === "radio" ? "checked" : ""}>${esc(label)}</label>`;
+          }).join("")}</div>${question.isOther ? `<input name="${esc(question.id)}__other" placeholder="其他回答（填写后优先使用）" ${question.isSecret ? 'type="password"' : ''} autocomplete="off">` : ""}` : `<input name="${esc(question.id)}" placeholder="请输入你的回答" ${question.isSecret ? 'type="password"' : ''} autocomplete="off">`;
+          return `<label>${esc(question.question || question.header || "请确认")}${control}</label>`;
+        }).join("") + '<div class="approval-actions"><button class="button approve" type="submit">确认并继续</button></div>';
+      } else {
+        form.innerHTML = '<div class="approval-actions"><button class="button decline" type="button" data-decision="decline">拒绝</button><button class="button approve" type="button" data-decision="accept">允许并继续</button></div>';
+        form.querySelectorAll("[data-decision]").forEach((button) => button.addEventListener("click", () => respondToCodex(button.dataset.decision)));
+      }
+    }
+
+    async function respondToCodex(decision = "") {
+      const request = currentState?.codex?.pending_request;
+      if (!request) return;
+      const answers = {};
+      if (request.kind === "user_input") {
+        const data = new FormData(document.querySelector("#approval-form"));
+        for (const question of request.params?.questions || []) {
+          const values = data.getAll(String(question.id)).map(String).filter(Boolean);
+          const other = String(data.get(`${question.id}__other`) || "").trim();
+          answers[question.id] = other || (values.length > 1 ? values : (values[0] || ""));
+        }
+      }
+      try {
+        await fetchJson("/api/codex/respond", { method: "POST", body: JSON.stringify({ request_id: request.id, answers, decision }) });
+        setNotice("已确认，Codex 继续执行");
+        await refresh();
+      } catch (error) { setNotice(error.message || String(error), true); }
+    }
+
+    async function refresh(silent = false) {
+      if (!silent) setNotice("正在同步本地状态…");
+      try {
+        const result = await callTool("get_job_autopilot_state");
+        render(extractState(result));
+        if (!silent) setNotice("状态已同步");
+      } catch (error) {
+        setNotice(error.message || String(error), true);
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== window.parent) return;
+      const message = event.data;
+      if (!message || message.jsonrpc !== "2.0") return;
+      if (message.id !== undefined && pending.has(message.id)) {
+        const request = pending.get(message.id);
+        pending.delete(message.id);
+        clearTimeout(request.timer);
+        if (message.error) request.reject(new Error(message.error.message || "组件调用失败"));
+        else request.resolve(message.result);
+        return;
+      }
+      if (message.method === "ui/notifications/tool-result") render(extractState(message.params));
+    }, { passive: true });
+
+    document.querySelector("#start-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const args = {
+        action: form.get("action"),
+        keywords: split(form.get("keywords")),
+        locations: split(form.get("locations")),
+        recruitment_type: form.get("recruitment_type"),
+      };
+      setNotice("正在创建任务请求…");
+      try {
+        render(extractState(await callTool("start_job_autopilot", args)));
+        await sendFollowUp("处理 Job Autopilot 嵌入式控制台中刚刚发起的任务。先读取 run-state，再按插件工作流接管。 ");
+        setNotice(hosted ? "任务已发给当前 Codex 对话" : "Codex 后台任务正在启动");
+      } catch (error) { setNotice(error.message || String(error), true); }
+    });
+
+    document.querySelector("#resume-button").addEventListener("click", async () => {
+      setNotice("正在创建简历解析请求…");
+      try {
+        render(extractState(await callTool("request_resume_parse", {})));
+        await sendFollowUp("解析 Job Autopilot 中待处理的简历，生成需要我确认的个人资料建议。 ");
+        if (hosted) setNotice("简历解析请求已发给当前 Codex 对话");
+      } catch (error) { setNotice(error.message || String(error), true); }
+    });
+
+    document.querySelector("#pause-button").addEventListener("click", async () => {
+      try {
+        render(extractState(await callTool("pause_job_autopilot", {})));
+        setNotice("Autopilot 已暂停");
+      } catch (error) { setNotice(error.message || String(error), true); }
+    });
+    document.querySelector("#refresh-button").addEventListener("click", refresh);
+    document.querySelector("#approval-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await respondToCodex();
+    });
+
+    const initial = window.openai?.toolOutput;
+    if (initial) render(extractState(initial));
+    else refresh();
+    if (!hosted) setInterval(() => refresh(true), 1800);
+  </script>
+</body>
+</html>

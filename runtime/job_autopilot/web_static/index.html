@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Job Autopilot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div><strong>Job Autopilot</strong><small>求职控制台</small></div>
+      </div>
+      <nav aria-label="主导航">
+        <button class="nav-item active" data-view="overview"><span>⌂</span>概览</button>
+        <button class="nav-item" data-view="jobs"><span>⌕</span>职位库</button>
+        <button class="nav-item" data-view="applications"><span>◎</span>投递记录</button>
+        <button class="nav-item" data-view="sites"><span>↗</span>招聘网站</button>
+        <button class="nav-item" data-view="profile"><span>◌</span>个人资料</button>
+      </nav>
+      <div class="sidebar-note">
+        <span class="status-dot"></span>
+        <div><strong>本地账本</strong><small>数据只保存在这台电脑</small></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">APPLICATION COMMAND CENTER</p>
+          <h1 id="page-title">早上好，今天继续向前。</h1>
+        </div>
+        <div class="top-actions">
+          <a class="button ghost" href="/embedded" target="_blank" rel="noopener">嵌入式预览</a>
+          <button class="button ghost" id="refresh-button">刷新</button>
+          <button class="button ghost" id="add-button">＋ 记录岗位</button>
+          <button class="button primary" id="autopilot-button"><span class="button-status-dot"></span><span id="autopilot-button-label">启动 Autopilot</span></button>
+        </div>
+      </header>
+
+      <section class="view active" id="view-overview">
+        <article class="run-console" id="run-console">
+          <div class="run-icon">▶</div>
+          <div class="run-copy"><span id="run-kicker">AI RUNNER</span><strong id="run-title">尚未启动</strong><small id="run-message">从这里发起找岗、继续投递或简历解析任务。</small></div>
+          <div class="run-meta"><span id="run-state-badge">IDLE</span><small id="run-time">—</small></div>
+        </article>
+        <article class="approval-panel" id="codex-approval" hidden>
+          <div class="approval-copy">
+            <p class="eyebrow">NEEDS YOUR CONFIRMATION</p>
+            <h2 id="approval-title">Codex 需要你确认</h2>
+            <p id="approval-message"></p>
+          </div>
+          <form id="approval-form" class="approval-form"></form>
+        </article>
+        <div class="hero-grid">
+          <article class="hero-card">
+            <div>
+              <span class="pill">AUTOPILOT READY</span>
+              <h2>把精力留给选择，<br>把重复交给系统。</h2>
+              <p>发现岗位、登录、填写与追踪串成同一条可审计流程。</p>
+            </div>
+            <div class="orbit" aria-hidden="true">
+              <i></i><i></i><i></i><b>JA</b>
+            </div>
+          </article>
+          <article class="mode-card">
+            <div class="card-heading"><span>投递策略</span><span class="shield">✓</span></div>
+            <h3 id="mode-title">提交前确认</h3>
+            <p id="mode-copy">系统可以填写完整表单，最终提交由你确认。</p>
+            <label class="switch-row">
+              <span>自动推进</span>
+              <input type="checkbox" id="automatic-toggle">
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <small>仅对允许的网站生效；敏感信息与最终提交仍需即时确认。</small>
+          </article>
+        </div>
+
+        <div class="metrics" id="metrics"></div>
+
+        <div class="content-grid">
+          <article class="panel pipeline-panel">
+            <div class="panel-header">
+              <div><p class="eyebrow">PIPELINE</p><h2>投递进度</h2></div>
+              <button class="text-button" data-target-view="applications">查看全部 →</button>
+            </div>
+            <div class="pipeline" id="pipeline"></div>
+          </article>
+          <article class="panel activity-panel">
+            <div class="panel-header"><div><p class="eyebrow">LIVE ACTIVITY</p><h2>实时进展</h2></div><span class="activity-source" id="activity-source">共享活动流</span></div>
+            <div id="recent-list" class="recent-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="view-jobs">
+        <article class="panel wide-panel">
+          <div class="panel-header responsive-header">
+            <div><p class="eyebrow">2027 FALL CAMPUS JOBS</p><h2>27届秋招职位库</h2></div>
+            <div class="job-toolbar">
+              <select id="source-job-direction" aria-label="岗位方向">
+                <option value="tech" selected>计算机 / 开发 / Agent</option>
+                <option value="agent">Agent / AI</option>
+                <option value="development">开发 / 后端</option>
+                <option value="computer">计算机相关</option>
+                <option value="">全部岗位</option>
+              </select>
+              <input id="source-job-query" type="search" placeholder="搜索公司、岗位或行业">
+            </div>
+          </div>
+          <div class="source-summary">
+            <div><strong id="source-total">0</strong><span>匹配职位</span></div>
+            <p id="source-sync-copy">正在载入随插件发布的 2027 届秋招职位快照。</p>
+          </div>
+          <div class="table-wrap">
+            <table class="jobs-table">
+              <thead><tr><th>岗位</th><th>公司</th><th>地点</th><th>批次 / 学历</th><th>截止</th><th>更新时间</th><th></th></tr></thead>
+              <tbody id="source-jobs-table"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" id="view-applications">
+        <article class="panel wide-panel">
+          <div class="panel-header responsive-header">
+            <div><p class="eyebrow">APPLICATIONS</p><h2>全部投递</h2></div>
+            <div class="filters" id="status-filters">
+              <button class="filter active" data-status="">全部</button>
+              <button class="filter" data-status="queued">待处理</button>
+              <button class="filter" data-status="ready_for_review">待确认</button>
+              <button class="filter" data-status="submitted">已投递</button>
+              <button class="filter" data-status="failed">失败</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>岗位</th><th>公司 / 网站</th><th>地点</th><th>状态</th><th>更新时间</th><th></th></tr></thead>
+              <tbody id="applications-table"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" id="view-sites">
+        <article class="panel wide-panel">
+          <div class="panel-header"><div><p class="eyebrow">SITES</p><h2>招聘网站记忆</h2></div></div>
+          <p class="section-copy">访问过的招聘域名、最近登录方式和时间。Job Autopilot 会先查这里，再决定是否需要重新登录。</p>
+          <div class="site-grid" id="sites-grid"></div>
+        </article>
+      </section>
+
+      <section class="view" id="view-profile">
+        <article class="panel resume-panel">
+          <div class="resume-intro">
+            <div class="resume-icon">CV</div>
+            <div><p class="eyebrow">AI PROFILE IMPORT</p><h2>用简历生成个人资料</h2><p>PDF、DOCX、TXT 或 Markdown。AI 会理解内容并生成建议，你确认后才会写入资料库。</p></div>
+          </div>
+          <div class="resume-action">
+            <span id="resume-file-label">先在下方填写简历绝对路径</span>
+            <button class="button dark compact" id="parse-resume" type="button">AI 解析简历</button>
+          </div>
+          <div id="resume-suggestions" class="resume-suggestions"></div>
+        </article>
+        <div class="profile-grid">
+          <article class="panel">
+            <div class="panel-header"><div><p class="eyebrow">PROFILE</p><h2>个人资料</h2></div><span class="local-tag">仅本机</span></div>
+            <form id="profile-form" class="form-grid">
+              <label><span>姓名</span><input name="name" autocomplete="name" placeholder="用于招聘表单"></label>
+              <label><span>手机号</span><input name="phone" autocomplete="tel" placeholder="用于账号登录"></label>
+              <label><span>邮箱</span><input name="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
+              <label><span>所在城市</span><input name="city" placeholder="例如：上海"></label>
+              <label class="full"><span>学校</span><input name="school" placeholder="学校名称"></label>
+              <label><span>学历</span><input name="degree" placeholder="本科 / 硕士"></label>
+              <label><span>专业</span><input name="major" placeholder="例如：软件工程"></label>
+              <label><span>毕业年份</span><input name="graduation_year" inputmode="numeric" placeholder="2027"></label>
+              <label class="full"><span>简历绝对路径</span><input name="resume_path" placeholder="/Users/you/Documents/resume.pdf"></label>
+              <label class="full"><span>个人主页 / GitHub</span><input name="portfolio_url" placeholder="https://..."></label>
+              <label class="full"><span>补充说明</span><textarea name="notes" rows="4" placeholder="只写可以复用的真实信息；不要存验证码或密码。"></textarea></label>
+              <div class="form-actions full"><span id="profile-message"></span><button class="button primary" type="submit">保存资料</button></div>
+            </form>
+            <div class="dynamic-section">
+              <div class="panel-header"><div><p class="eyebrow">LEARNED FIELDS</p><h2>AI 记住的扩展字段</h2></div><button class="button ghost" id="add-field" type="button">＋ 新增字段</button></div>
+              <p class="section-copy">遇到新公司问题时，AI 会先语义匹配现有事实；无法确定时询问你，确认后在这里沉淀为可复用字段。</p>
+              <div id="dynamic-fields-list" class="dynamic-fields-list"></div>
+            </div>
+          </article>
+          <article class="panel policy-panel">
+            <p class="eyebrow">GUARDRAILS</p><h2>自动推进白名单</h2>
+            <p>每行一个招聘网站域名。允许的网站可自动进行到最终确认页；留空时所有岗位都会停在提交前。</p>
+            <textarea id="allowed-domains" rows="8" placeholder="talent.didiglobal.com&#10;zhaopin.meituan.com"></textarea>
+            <button class="button dark" id="save-policy">保存策略</button>
+            <div class="privacy-note"><strong>必须由你确认</strong><span>敏感信息传输、最终提交、CAPTCHA、诚信声明与开放性主观题。</span></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="application-dialog">
+    <form method="dialog" id="application-form">
+      <div class="dialog-header"><div><p class="eyebrow">NEW APPLICATION</p><h2>记录一个岗位</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <label><span>岗位名称</span><input name="title" required></label>
+      <label><span>公司</span><input name="company" required></label>
+      <label><span>官网岗位链接</span><input name="url" type="url" required></label>
+      <div class="split-fields">
+        <label><span>JDWatch ID</span><input name="jdwatch_id" inputmode="numeric"></label>
+        <label><span>地点</span><input name="locations" placeholder="北京, 上海"></label>
+      </div>
+      <label><span>备注</span><textarea name="notes" rows="3"></textarea></label>
+      <div class="dialog-actions"><span id="dialog-message"></span><button class="button primary" value="default">加入队列</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="run-dialog">
+    <form method="dialog" id="run-form">
+      <div class="dialog-header"><div><p class="eyebrow">START AUTOPILOT</p><h2>启动本轮任务</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <label><span>执行方式</span><select name="action"><option value="discover_and_apply">找岗并推进投递</option><option value="process_queue">继续处理现有队列</option></select></label>
+      <label><span>岗位关键词</span><input name="keywords" placeholder="Agent, 后端"></label>
+      <label><span>期望地点</span><input name="locations" placeholder="上海, 杭州"></label>
+      <label><span>招聘类型</span><select name="recruitment_type"><option value="campus">校招</option><option value="intern">实习</option><option value="social">社招</option></select></label>
+      <div class="callout"><strong>AI 执行，不是脚本乱点</strong><span>我会理解页面、匹配字段并处理动态表单；敏感信息与最终提交仍按安全规则确认。</span></div>
+      <div class="dialog-actions"><span id="run-dialog-message"></span><button class="button primary" value="default">启动任务</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="field-dialog">
+    <form method="dialog" id="field-form">
+      <div class="dialog-header"><div><p class="eyebrow">REUSABLE FACT</p><h2>记住一个新字段</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <label><span>字段名称</span><input name="label" required placeholder="例如：工作许可说明"></label>
+      <label><span>值</span><textarea name="value" rows="3" required></textarea></label>
+      <label><span>相近问法 / 别名</span><input name="aliases" placeholder="是否需要签证赞助, Sponsorship required"></label>
+      <label><span>适用范围</span><select name="scope"><option value="global">所有公司</option><option value="company">只用于当前公司</option></select></label>
+      <div class="dialog-actions"><span id="field-dialog-message"></span><button class="button primary" value="default">确认并记住</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

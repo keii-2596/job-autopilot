@@ -1,0 +1,4 @@
+interface:
+  display_name: "Job Autopilot"
+  short_description: "自动查找并追踪岗位申请"
+  default_prompt: "使用 Job Autopilot 查找匹配岗位、避免重复，并安全推进投递流程。"

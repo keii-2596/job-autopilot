@@ -1,0 +1,42 @@
+{
+  "name": "job-autopilot",
+  "version": "0.4.0",
+  "description": "Maintain a 2027 fall campus job library, automate recruiting sites, and track every application.",
+  "author": {
+    "name": "Keii"
+  },
+  "license": "MIT",
+  "keywords": [
+    "jobs",
+    "applications",
+    "browser-automation",
+    "jdwatch",
+    "adb"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Job Autopilot",
+    "shortDescription": "自动找岗、填表投递，并记住每一次申请",
+    "longDescription": "通过 JDWatch 发现岗位，使用浏览器完成招聘网站登录与表单填写，通过 ADB 获取手机验证码，并在本地控制台记录待投、已投和失败状态，避免重复申请。",
+    "developerName": "Keii",
+    "category": "Productivity",
+    "capabilities": [
+      "Job discovery",
+      "Browser form automation",
+      "ADB phone verification",
+      "Application tracking",
+      "2027 fall campus job library",
+      "Bundled public job snapshot",
+      "Cross-conversation progress stream",
+      "Standalone Codex task runner",
+      "Embedded MCP Apps UI"
+    ],
+    "defaultPrompt": [
+      "帮我查找匹配岗位并加入投递队列。",
+      "继续处理待投岗位，填写到提交前让我确认。",
+      "打开 Job Autopilot 控制台。"
+    ],
+    "brandColor": "#163A2D"
+  }
+}
