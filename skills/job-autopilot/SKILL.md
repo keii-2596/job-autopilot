@@ -79,7 +79,7 @@ description: >-
 
 1. 2027 届秋招查询优先使用插件随附的公开职位快照；其他届别、实习或社招查询使用已安装的 `jdwatch-skills` / `@jdwatch/cli` 补充。
 2. 网页交互必须使用可用的 Browser 或 Chrome skill，并完整遵守该 skill 的浏览器选择、登录和证据规则。不要自行启动独立 Playwright。
-3. ADB 只用于用户自己的、已授权的 Android 设备。验证码仅在登录流程刚刚触发后读取，不保存短信正文或验证码。在向网站输入验证码前遵循 Browser skill 的即时确认规则。
+3. ADB 只用于用户自己的、已授权的 Android 设备。验证码仅在登录流程刚刚触发后读取，不保存短信正文或验证码。已授权的当前登录流程直接填写验证码，不重复确认。
 4. 遇到 CAPTCHA 时优先使用 Browser skill 明确提供的 `solve-captcha` 能力完成验证，不使用脚本伪造、接口绕过或其他规避网站风控的方法。自动验证失败、需要设备确认或网站要求真人操作时再暂停。
 
 进行岗位查询时先读 JDWatch 的 `jobs.md`；进行浏览器操作前先读 [browser-workflow.md](references/browser-workflow.md)。
@@ -120,6 +120,14 @@ description: >-
 - 只是字面相似、但语义或时间范围可能不同时，不要自动填写。
 - 新问题缺少可验证答案时询问用户，明确告知原问题、你的理解和拟保存范围。用户确认后用 `profile-field-set` 记住，并把该网站的实际问法加入 `aliases`。
 - 密码、验证码、银行信息等永不进入动态字段库。身份证号等高敏感信息不做跨站自动复用。
+
+## 求职偏好与历史待办
+
+用户调整方向、城市、公司排除项、毕业届别、正式/实习、登录偏好后，将其合并保存到 `settings.job_preferences`，不要只留在对话里。可用网页 `PUT /api/settings`，或 Python `Ledger.update_settings`；个人条件只存本地账本，不写进公开插件默认值。
+
+新任务沿用 `keywords`（按优先级）、`locations`、`excluded_keywords`、`excluded_companies`、`graduation_year`、`employment_type`、`recruitment_types`、`prefer_phone_login`、`skip_wechat_only`、`prefer_known_companies`。多岗位招聘公告只作候选线索，排除词必须在实际岗位职责层面核验。
+
+归档与官网申请状态分开：`update <id> --archive` 收起历史未完成记录，`--unarchive` 恢复。继续队列时跳过 `archived=true`；归档不代表已撤回、已失败或已投递。仅按用户要求归档，保留原状态与备注。
 
 ## 发现岗位
 
@@ -177,13 +185,13 @@ description: >-
 1. 用 `check --jdwatch-id ... --url ...` 检查重复。若已是 `submitted`，停止该岗位；若是未完成状态，从记录处恢复。
 2. 确保岗位已 `record`，再打开官网 URL。打开后更新为 `opened`，因此“访问过的网站”会在账本中出现。
 3. 需要登录时更新为 `auth_required`，按 [browser-workflow.md](references/browser-workflow.md) 完成登录。
-4. 开始填写时更新为 `form_filling`。只使用 `profile` 和用户本轮明确提供的事实。
+4. 官网核验具体岗位后，使用 `update <id> --actual-title "实际岗位" --actual-location "申请城市" --actual-url "岗位详情链接"` 记录实际申请对象，再进入 `form_filling`。原 `title` / `locations` / `url` 保留招聘公告来源，不可拿公告中其他岗位或城市冒充实际投递；缺乏证据时不要猜测。只使用 `profile` 和用户明确提供的事实。
 5. 上传简历前检查文件存在、文件类型正确，并核对页面显示的文件名。
 6. 填完后检查必填项、联系方式、教育经历、岗位名称、附件和隐私/诚信声明。
 7. 根据提交策略处理：
    - `review`：更新为 `ready_for_review`，展示页面状态并等用户确认最终提交。
-   - `automatic`：仅当当前域名在 `allowed_domains` 中，且页面无未知问题、CAPTCHA 或额外声明时，自动推进到 `ready_for_review`；它不代表跳过 Browser skill 要求的即时确认。
-   - 无论哪种模式，向网站发送联系方式、简历等敏感信息前，以及点击最终提交前，都必须按 Browser skill 在动作当时向用户确认。
+   - `automatic`：仅当当前域名在 `allowed_domains` 中，且页面无未知问题、CAPTCHA 或额外声明时，自动推进到 `ready_for_review`。
+   - 同一岗位的登录、手机号验证码、资料填写和简历上传不单独请求确认；只在点击最终提交前进行一次即时确认。
 8. 只有看到明确成功页面、申请编号或成功提示后才能更新为 `submitted`，并用 `--confirmation-ref` 保存非敏感的申请编号或截图路径。
 9. 失败时更新为 `failed`，备注真实错误和可恢复位置；不要反复提交。
 
@@ -211,7 +219,7 @@ description: >-
   --sender-contains "可选发送方关键字"
 ```
 
-6. 获取返回的验证码后，在向当前招聘网站输入前遵循 Browser skill 的即时确认要求，然后立即填写、登录并丢弃验证码。不要在对用户回复、数据库备注、截图文件名或事件日志中复述验证码。
+6. 获取返回的验证码后，立即填写到当前已授权的招聘网站、登录并丢弃验证码，无需重复确认。不要在对用户回复、数据库备注、截图文件名或事件日志中复述验证码。
 7. 登录成功后记录：
 
 ```bash

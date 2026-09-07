@@ -22,6 +22,7 @@ const esc = (value = "") => String(value)
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
+    signal: AbortSignal.timeout(10000),
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
   });
@@ -46,13 +47,13 @@ function formatTime(value) {
 }
 
 function statusCount(statuses) {
-  return state.applications.filter((item) => statuses.includes(item.status)).length;
+  return state.applications.filter((item) => !item.archived && statuses.includes(item.status)).length;
 }
 
 function renderOverview() {
   const metrics = [
     ["全部岗位", state.applications.length],
-    ["待处理", statusCount(["discovered", "queued", "opened", "auth_required", "form_filling"])],
+    ["未完成", statusCount(["discovered", "queued", "opened", "auth_required", "form_filling"])],
     ["待确认", statusCount(["ready_for_review"])],
     ["已投递", statusCount(["submitted"])],
   ];
@@ -62,7 +63,7 @@ function renderOverview() {
 
   const pipeline = [
     ["新发现", statusCount(["discovered"])],
-    ["处理进行中", statusCount(["queued", "opened", "auth_required", "form_filling"])],
+    ["未完成申请", statusCount(["queued", "opened", "auth_required", "form_filling"])],
     ["等待确认", statusCount(["ready_for_review"])],
     ["提交成功", statusCount(["submitted"])],
   ];
@@ -101,28 +102,50 @@ function statusOptions(current) {
   return Object.entries(statusLabels).map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${label}</option>`).join("");
 }
 
+const pendingStatuses = ["discovered", "queued", "opened", "auth_required", "form_filling"];
+const splitList = (value) => String(value || "").split(/[,，、\n]/).map(x => x.trim()).filter(Boolean);
+const titleOf = (item) => item.actual_title || item.title;
+const citiesOf = (item) => item.actual_title ? (item.actual_locations || []) : (item.locations || []);
+const urlOf = (item) => item.actual_url || item.url;
 function renderApplications() {
-  const rows = state.filter ? state.applications.filter((item) => item.status === state.filter) : state.applications;
+  const rows = state.applications.filter(item => {
+    if (state.filter === "archived") return item.archived;
+    if (item.archived) return false;
+    if (state.filter === "pending") return pendingStatuses.includes(item.status);
+    return !state.filter || item.status === state.filter;
+  });
   document.querySelector("#applications-table").innerHTML = rows.length ? rows.map((item) => `
     <tr>
-      <td class="job-cell"><strong>${esc(item.title)}</strong><small>${item.jdwatch_id ? `JDWatch #${item.jdwatch_id}` : `本地记录 #${item.id}`}</small></td>
-      <td class="job-cell"><strong>${esc(item.company)}</strong><small>${esc(item.site_domain)}</small></td>
-      <td>${esc((item.locations || []).join("、") || "—")}</td>
-      <td><select class="status-badge status-${esc(item.status)}" data-app-id="${item.id}">${statusOptions(item.status)}</select></td>
-      <td>${formatTime(item.updated_at)}</td>
-      <td><a class="link-button" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">官网 ↗</a></td>
-    </tr>
-  `).join("") : '<tr><td colspan="6" class="empty">这个分类还没有岗位。</td></tr>';
-  document.querySelectorAll("select[data-app-id]").forEach((select) => {
-    select.addEventListener("change", async (event) => {
-      const id = Number(event.target.dataset.appId);
-      try {
-        await api(`/api/applications/${id}`, { method: "PATCH", body: JSON.stringify({ status: event.target.value }) });
-        await loadData();
-        toast("状态已更新");
-      } catch (error) { toast(error.message); }
-    });
-  });
+      <td class="job-cell"><button class="text-button role-title edit-application" data-id="${item.id}" title="${esc(titleOf(item))}">${esc(titleOf(item))}</button><small>${item.actual_title ? "实际申请岗位" : "待核验 · 招聘公告"} · #${item.id}</small></td>
+      <td class="job-cell"><strong>${esc(item.company)}</strong><small class="truncate" title="${esc(item.site_domain)}">${esc(item.site_domain)}</small></td>
+      <td><span class="clamp" title="${esc(citiesOf(item).join("、"))}">${esc(citiesOf(item).join("、") || "未记录")}</span></td>
+      <td><select aria-label="${esc(item.company)}申请状态" class="status-badge status-${esc(item.status)}" data-app-id="${item.id}">${statusOptions(item.status)}</select>${item.archived ? '<small>已归档</small>' : ''}</td>
+      <td class="time-cell">${formatTime(item.updated_at)}</td>
+      <td><div class="row-actions"><a class="link-button" href="${esc(urlOf(item))}" target="_blank" rel="noopener noreferrer">官网 ↗</a><button type="button" class="text-button archive-application" data-id="${item.id}">${item.archived ? "恢复" : "归档"}</button></div></td>
+    </tr>`).join("") : '<tr><td colspan="6" class="empty">这个分类还没有记录。</td></tr>';
+  document.querySelectorAll("select[data-app-id]").forEach(select => select.addEventListener("change", async event => {
+    try {
+      await api(`/api/applications/${event.target.dataset.appId}`, {method: "PATCH", body: JSON.stringify({status: event.target.value})});
+      await loadData(); toast("状态已更新");
+    } catch (error) { toast(error.message); }
+  }));
+  document.querySelectorAll(".archive-application").forEach(button => button.addEventListener("click", async () => {
+    const item = state.applications.find(x => x.id === Number(button.dataset.id));
+    try {
+      await api(`/api/applications/${item.id}`, {method: "PATCH", body: JSON.stringify({archived: !item.archived})});
+      await loadData(); toast(item.archived ? "已恢复记录" : "已归档，官网申请状态不变");
+    } catch (error) { toast(error.message); }
+  }));
+  document.querySelectorAll(".edit-application").forEach(button => button.addEventListener("click", () => {
+    const item = state.applications.find(x => x.id === Number(button.dataset.id));
+    const form = document.querySelector("#detail-form");
+    form.elements.application_id.value = item.id;
+    form.elements.actual_title.value = item.actual_title || "";
+    form.elements.actual_locations.value = (item.actual_locations || []).join(", ");
+    form.elements.actual_url.value = item.actual_url || "";
+    document.querySelector("#application-source").textContent = `${item.title}\n${(item.locations || []).join("、")}\n${item.url}\n${item.notes || ""}\n${item.confirmation_ref || ""}`;
+    document.querySelector("#detail-dialog").showModal();
+  }));
 }
 
 function renderSourceJobs() {
@@ -130,20 +153,20 @@ function renderSourceJobs() {
   const sync = summary.sync || {};
   document.querySelector("#source-total").textContent = Number(summary.filtered_total ?? summary.total ?? 0).toLocaleString("zh-CN");
   const syncText = summary.last_seen_at ? `数据更新于 ${formatTime(summary.last_seen_at)}` : "尚无职位快照";
-  document.querySelector("#source-sync-copy").textContent = `${syncText}。共 ${Number(summary.total || 0).toLocaleString("zh-CN")} 个唯一岗位；当前按岗位方向筛选。`;
+  document.querySelector("#source-sync-copy").textContent = `${syncText}。共 ${Number(summary.total || 0).toLocaleString("zh-CN")} 条招聘公告；匹配 ${state.sourceJobs.length} 条已加载记录（最多 500 条），可搜索缩小范围。`;
   const target = document.querySelector("#source-jobs-table");
   target.innerHTML = state.sourceJobs.length ? state.sourceJobs.map((item) => {
     const detailUrl = item.apply_url || item.announcement_url;
     const batches = (item.recruitment_batches || []).join("、") || "秋招";
     const education = (item.education_levels || []).join("、") || "学历不限";
     return `<tr>
-      <td class="job-cell"><strong>${esc(item.title)}</strong><small>${esc((item.title_items || []).slice(0, 3).join("、") || item.industry || `白瓜 #${item.source_key}`)}</small></td>
+      <td class="job-cell"><details class="source-title"><summary><span class="clamp">${esc(item.title)}</span></summary><div>${esc(item.title)}</div></details><small>${esc(item.industry || (item.source_key ? `白瓜 #${item.source_key}` : "招聘公告"))}</small></td>
       <td class="job-cell"><strong>${esc(item.company_name)}</strong><small>${esc(item.company_type || item.industry || "—")}</small></td>
-      <td>${esc((item.locations || []).join("、") || "—")}</td>
+      <td><span class="clamp" title="${esc((item.locations || []).join("、"))}">${esc((item.locations || []).join("、") || "—")}</span></td>
       <td><div class="job-tags"><span>${esc(batches)}</span><small>${esc(education)}</small></div></td>
       <td>${esc(item.deadline_text || item.deadline_date || "—")}</td>
       <td>${formatTime(item.source_updated_at || item.updated_at)}</td>
-      <td class="job-actions">${detailUrl ? `<a class="link-button" href="${esc(detailUrl)}" target="_blank" rel="noopener noreferrer">查看 ↗</a>` : ""}<button class="text-button queue-source-job" data-source-job-id="${item.id}">加入队列</button></td>
+      <td><div class="job-actions">${detailUrl ? `<a class="link-button" href="${esc(detailUrl)}" target="_blank" rel="noopener noreferrer">查看 ↗</a>` : ""}<button class="text-button queue-source-job" data-source-job-id="${item.id}">加入队列</button></div></td>
     </tr>`;
   }).join("") : '<tr><td colspan="7" class="empty">没有匹配职位，请调整岗位方向或搜索条件。</td></tr>';
   document.querySelectorAll(".queue-source-job").forEach((button) => button.addEventListener("click", async () => {
@@ -287,6 +310,13 @@ function renderProfile() {
   document.querySelector("#automatic-toggle").checked = automatic;
   document.querySelector("#mode-title").textContent = automatic ? "白名单自动推进" : "提交前确认";
   document.querySelector("#mode-copy").textContent = automatic ? "允许的网站会自动推进到最终确认页，并保存填写进度。" : "系统可以填写完整表单，最终提交由你确认。";
+  const preferences = state.settings.job_preferences || {};
+  for (const field of document.querySelector("#preferences-form").elements) {
+    if (!field.name) continue;
+    const value = preferences[field.name];
+    if (field.type === "checkbox") field.checked = Boolean(value);
+    else field.value = Array.isArray(value) ? value.join(", ") : (value || "");
+  }
   renderDynamicFields();
   renderResumeImport();
 }
@@ -300,19 +330,21 @@ async function loadData() {
     ]);
     Object.assign(state, { applications, sourceJobs, sourceJobsSummary, sites, profile, settings, automation, profileImport, codex, activity });
     renderOverview(); renderSourceJobs(); renderApplications(); renderSites(); renderProfile(); renderAutomation();
-  } catch (error) { toast(error.message); }
+    document.querySelector("#connection-error").hidden = true;
+    return true;
+  } catch (error) { document.querySelector("#connection-error").hidden = false; toast(error.message); return false; }
 }
 
 function showView(name) {
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${name}`));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === name));
-  const titles = { overview: "早上好，今天继续向前。", jobs: "只看真正属于 27 届的秋招机会。", applications: "每一次申请，都有迹可循。", sites: "登录过的网站，不必重新摸索。", profile: "先把真实信息准备好。" };
+  const titles = { overview: "今天继续向前。", jobs: "只看真正属于 27 届的秋招机会。", applications: "每一次申请，都有迹可循。", sites: "登录过的网站，不必重新摸索。", profile: "先把真实信息准备好。" };
   document.querySelector("#page-title").textContent = titles[name] || titles.overview;
 }
 
 document.querySelectorAll(".nav-item").forEach((item) => item.addEventListener("click", () => showView(item.dataset.view)));
 document.querySelectorAll("[data-target-view]").forEach((item) => item.addEventListener("click", () => showView(item.dataset.targetView)));
-document.querySelector("#refresh-button").addEventListener("click", async () => { await loadData(); toast("已刷新"); });
+document.querySelector("#refresh-button").addEventListener("click", async () => { if (await loadData()) toast("已刷新"); });
 document.querySelector("#add-button").addEventListener("click", () => document.querySelector("#application-dialog").showModal());
 document.querySelector("#add-field").addEventListener("click", () => document.querySelector("#field-dialog").showModal());
 let sourceSearchTimer;
@@ -339,6 +371,11 @@ document.querySelector("#autopilot-button").addEventListener("click", async () =
       renderAutomation(); toast("Autopilot 已暂停");
     } catch (error) { toast(error.message); }
   } else {
+    const preferences = state.settings.job_preferences || {};
+    const form = document.querySelector("#run-form");
+    form.elements.keywords.value = (preferences.keywords || []).join(", ");
+    form.elements.locations.value = (preferences.locations || []).join(", ");
+    form.elements.recruitment_type.value = preferences.recruitment_types?.[0] || "campus";
     document.querySelector("#run-dialog").showModal();
   }
 });
@@ -374,12 +411,15 @@ document.querySelector("#run-form").addEventListener("submit", async (event) => 
   const body = {
     action: form.get("action"),
     criteria: {
+      ...state.settings.job_preferences,
       keywords: split(form.get("keywords")),
       locations: split(form.get("locations")),
       recruitment_type: form.get("recruitment_type"),
+      recruitment_types: [form.get("recruitment_type")],
     },
   };
   try {
+    state.settings = await api("/api/settings", {method: "PUT", body: JSON.stringify({job_preferences: body.criteria})});
     const result = await api("/api/automation/start", { method: "POST", body: JSON.stringify(body) });
     Object.assign(state, result);
     document.querySelector("#run-dialog").close(); renderAutomation();
@@ -449,16 +489,53 @@ document.querySelector("#approval-form").addEventListener("submit", async (event
   await respondToCodex();
 });
 
+document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
+document.querySelectorAll("dialog").forEach(dialog => {
+  dialog.addEventListener("click", event => {
+    if (event.target !== dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+  });
+  dialog.addEventListener("close", () => dialog.querySelectorAll('[id$="message"]').forEach(x => x.textContent = ""));
+});
+document.querySelector("#retry-connection").addEventListener("click", loadData);
+document.querySelector("#preferences-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.target;
+  const preferences = {};
+  for (const key of ["keywords", "locations", "excluded_keywords", "excluded_companies", "recruitment_types"]) preferences[key] = splitList(form.elements[key].value);
+  for (const key of ["prefer_phone_login", "skip_wechat_only", "prefer_known_companies"]) preferences[key] = form.elements[key].checked;
+  for (const key of ["graduation_year", "employment_type"]) preferences[key] = form.elements[key].value.trim();
+  try {
+    state.settings = await api("/api/settings", {method: "PUT", body: JSON.stringify({job_preferences: preferences})});
+    toast("求职偏好已保存，新任务将沿用这些条件");
+  } catch (error) { toast(error.message); }
+});
+document.querySelector("#detail-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const body = Object.fromEntries(new FormData(event.target));
+  body.actual_locations = splitList(body.actual_locations);
+  try {
+    await api(`/api/applications/${body.application_id}`, {method: "PATCH", body: JSON.stringify(body)});
+    document.querySelector("#detail-dialog").close(); await loadData(); toast("实际投递信息已更新");
+  } catch (error) { document.querySelector("#detail-message").textContent = error.message; }
+});
 const initialView = new URLSearchParams(window.location.search).get("view");
 if (["overview", "jobs", "applications", "sites", "profile"].includes(initialView)) showView(initialView);
 loadData();
 setInterval(async () => {
+  if (!document.querySelector("#connection-error").hidden) { await loadData(); return; }
   try {
     const [codex, automation, activity, applications] = await Promise.all([api("/api/codex"), api("/api/automation"), api("/api/activity"), api("/api/applications")]);
     state.codex = codex;
     state.automation = automation;
     state.activity = activity;
+    const applicationsChanged = JSON.stringify(state.applications) !== JSON.stringify(applications);
     state.applications = applications;
+    state.applicationsDirty ||= applicationsChanged;
+    if (state.applicationsDirty && !document.activeElement?.matches("select[data-app-id]")) {
+      renderApplications(); state.applicationsDirty = false;
+    }
     renderOverview(); renderAutomation();
-  } catch (_) { /* manual refresh will surface connection errors */ }
+  } catch (_) { document.querySelector("#connection-error").hidden = false; }
 }, 1800);

@@ -135,7 +135,7 @@ main { padding: 34px 44px 60px; min-width: 0; }
 .responsive-header { align-items: flex-end; }
 .job-toolbar { display: flex; align-items: center; gap: 9px; }
 .job-toolbar input { width: min(300px, 30vw); background: white; }
-.job-toolbar select { width: 190px; background: white; }
+.job-toolbar select { width: 230px; background: white; }
 .source-summary { display: flex; align-items: center; gap: 22px; margin-top: 22px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(100deg, rgba(216,243,106,.17), rgba(255,255,255,.45)); }
 .source-summary > div { min-width: 100px; padding-right: 20px; border-right: 1px solid var(--line); }
 .source-summary strong, .source-summary span { display: block; }.source-summary strong { font: 500 28px/1 Georgia, serif; }.source-summary span { margin-top: 5px; color: var(--muted); font-size: 10px; }.source-summary p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
@@ -210,4 +210,73 @@ dialog form { padding: 25px; display: grid; gap: 14px; }
 @media (max-width: 680px) {
   .shell { display: block; }.sidebar { position: static; width: 100%; height: auto; padding: 14px 18px; flex-direction: row; align-items: center; }.brand { border: 0; padding: 0; }.brand > div:last-child { display: block; }.sidebar nav { margin: 0 0 0 auto; display: flex; }.nav-item { width: 42px; padding: 9px; }.sidebar-note { display: none; }
   main { padding: 24px 16px 42px; }.topbar { align-items: flex-start; flex-direction: column; gap: 16px; }.top-actions { width: 100%; justify-content: flex-end; }.top-actions .ghost { display: none; }.run-console { grid-template-columns: auto 1fr; }.run-meta { grid-column: 2; text-align: left; }.hero-card { min-height: 300px; padding: 27px; }.orbit { position: absolute; right: -38px; bottom: -55px; opacity: .75; }.metrics { grid-template-columns: 1fr 1fr; }.site-grid, .form-grid { grid-template-columns: 1fr; }.resume-action { align-items: stretch; flex-direction: column; }.button.dark.compact { width: 100%; }.suggestion-card { grid-template-columns: auto 1fr; }.suggestion-card .confidence { grid-column: 2; }.full { grid-column: auto; }.responsive-header { align-items: flex-start; flex-direction: column; }.filters { width: 100%; overflow-x: auto; }.split-fields { grid-template-columns: 1fr; }.job-toolbar { width: 100%; flex-wrap: wrap; }.job-toolbar input { width: 100%; }.source-summary { align-items: flex-start; flex-direction: column; }.source-summary > div { border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 12px; width: 100%; }
+}
+
+/* Keep long recruitment notices inside their own columns, including at narrow widths. */
+.shell { grid-template-columns: 220px minmax(0, 1fr); }
+main, .panel, .view, .recent-item > div, .run-copy { min-width: 0; }
+.topbar, .top-actions, .responsive-header { flex-wrap: wrap; }
+.top-actions { flex-shrink: 0; }
+button, input, textarea, select { font: inherit; }
+.table-wrap { max-width: 100%; }
+table { table-layout: fixed; }
+.applications-table { min-width: 880px; }
+.applications-table .col-role { width: 29%; }
+.applications-table .col-company { width: 22%; }
+.applications-table .col-city { width: 13%; }
+.applications-table .col-status { width: 124px; }
+.applications-table .col-time { width: 112px; }
+.applications-table .col-actions { width: 78px; }
+.jobs-table { min-width: 980px; }
+.jobs-table .col-role { width: 34%; }
+.jobs-table .col-company { width: 17%; }
+.jobs-table .col-city { width: 15%; }
+.jobs-table .col-batch { width: 104px; }
+.jobs-table .col-deadline { width: 94px; }
+.jobs-table .col-time { width: 100px; }
+.jobs-table .col-actions { width: 92px; }
+th { font-size: 11px; letter-spacing: .03em; white-space: nowrap; }
+td { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.job-cell strong { max-width: none; }
+.role-title { font-size: 14px; padding: 0; text-align: left; line-height: 1.6; }
+.clamp, .role-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+select.status-badge { width: 100px; min-width: 100px; height: 36px; padding: 6px 24px 6px 10px; font-size: 12px; }
+.time-cell { font-variant-numeric: tabular-nums; }
+.row-actions, .job-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.row-actions button { padding: 0; }
+.source-title summary { cursor: pointer; }
+.source-title summary .clamp { font-weight: 650; }
+.source-title[open] summary .clamp { display: none; }
+.source-title[open] > div { padding-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.source-detail { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; color: var(--muted); line-height: 1.7; }
+.track span { min-width: 0; }
+.recent-item small { overflow-wrap: anywhere; }
+.preferences-panel { margin-bottom: 18px; }
+.check-label { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.check-label input { width: 18px; height: 18px; }
+.connection-error { padding: 14px; background: #fff0d3; border-radius: 12px; margin-bottom: 16px; font-size: 13px; }
+.connection-error[hidden] { display: none; }
+.connection-error button { margin-left: 10px; }
+dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.dialog-header { gap: 16px; }
+.icon-button { flex: 0 0 34px; }
+.filters { flex-wrap: wrap; }
+@media (max-width: 1100px) {
+ .shell { grid-template-columns: 82px minmax(0, 1fr); }
+ .sidebar { padding-inline: 12px; }
+ .brand > div:last-child, .sidebar-note div { display: none; }
+ .nav-item { font-size: 0; justify-content: center; }
+ .nav-item span { font-size: 18px; }
+ .brand { padding-inline: 0; }
+ .hero-grid, .content-grid, .profile-grid, .resume-panel { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+ .shell { display: block; }
+ .sidebar { flex-wrap: wrap; gap: 10px; }
+ .sidebar nav { flex-wrap: wrap; }
+ .top-actions { justify-content: flex-start; flex-wrap: wrap; }
+ .top-actions .ghost { display: inline-flex; }
+ .panel { padding: 16px; }
+ .job-toolbar input, .job-toolbar select { width: 100%; }
 }

@@ -17,3 +17,5 @@ local/
 private/
 runtime/job_autopilot/baigua.py
 tests/test_baigua.py
+
+node_modules/

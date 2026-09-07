@@ -63,6 +63,9 @@ class JobAutopilotMCP:
                 {
                     "id": item.get("id"),
                     "title": item.get("title"),
+                    "actual_title": item.get("actual_title") or "",
+                    "actual_locations": item.get("actual_locations") or [],
+                    "archived": bool(item.get("archived")),
                     "company": item.get("company"),
                     "status": item.get("status"),
                     "locations": item.get("locations") or [],
@@ -86,6 +89,7 @@ class JobAutopilotMCP:
             "settings": {
                 "submission_mode": settings.get("submission_mode") or "review",
                 "allowed_domains_count": len(settings.get("allowed_domains") or []),
+                "job_preferences": settings.get("job_preferences") or {},
             },
         }
 
@@ -196,8 +200,12 @@ class JobAutopilotMCP:
                         "application_id": {"type": "integer", "minimum": 1},
                         "status": {"type": "string", "enum": sorted(VALID_STATUSES)},
                         "notes": _text_schema("可选的非敏感处理备注"),
+                        "actual_title": _text_schema("官网核验后的实际申请岗位名称"),
+                        "actual_url": _text_schema("实际岗位详情链接"),
+                        "actual_locations": {"type": "array", "items": {"type": "string"}},
+                        "archived": {"type": "boolean"},
                     },
-                    "required": ["application_id", "status"],
+                    "required": ["application_id"],
                     "additionalProperties": False,
                 },
                 "annotations": local_write,
@@ -228,8 +236,9 @@ class JobAutopilotMCP:
             return self._result("已读取 Job Autopilot 当前状态。")
         if name == "start_job_autopilot":
             action = str(arguments.get("action") or "process_queue")
-            keywords = arguments.get("keywords") or []
-            locations = arguments.get("locations") or []
+            preferences = self.ledger.settings()["job_preferences"]
+            keywords = arguments.get("keywords", preferences["keywords"])
+            locations = arguments.get("locations", preferences["locations"])
             if not isinstance(keywords, list) or not isinstance(locations, list):
                 raise ValueError("keywords and locations must be arrays")
             self.ledger.request_automation(
@@ -237,7 +246,7 @@ class JobAutopilotMCP:
                 {
                     "keywords": [str(value).strip() for value in keywords if str(value).strip()],
                     "locations": [str(value).strip() for value in locations if str(value).strip()],
-                    "recruitment_type": str(arguments.get("recruitment_type") or "campus"),
+                    "recruitment_type": str(arguments.get("recruitment_type") or next(iter(preferences["recruitment_types"]), "campus")),
                 },
                 source="mcp_conversation",
             )
@@ -258,8 +267,10 @@ class JobAutopilotMCP:
         if name == "update_application_status":
             self.ledger.update_application(
                 int(arguments["application_id"]),
-                status=str(arguments["status"]),
+                status=arguments.get("status"),
                 notes=arguments.get("notes"),
+                actual_title=arguments.get("actual_title"), actual_url=arguments.get("actual_url"),
+                actual_locations=arguments.get("actual_locations"), archived=arguments.get("archived"),
             )
             return self._result("投递状态已更新。")
         raise ValueError(f"unknown tool: {name}")

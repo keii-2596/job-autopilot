@@ -28,10 +28,11 @@
     </aside>
 
     <main>
+      <div id="connection-error" class="connection-error" role="alert" hidden>本地服务暂时不可用，正在重连。已加载的数据仍保留。<button type="button" id="retry-connection">立即重试</button></div>
       <header class="topbar">
         <div>
           <p class="eyebrow">APPLICATION COMMAND CENTER</p>
-          <h1 id="page-title">早上好，今天继续向前。</h1>
+          <h1 id="page-title">今天继续向前。</h1>
         </div>
         <div class="top-actions">
           <a class="button ghost" href="/embedded" target="_blank" rel="noopener">嵌入式预览</a>
@@ -75,7 +76,7 @@
               <input type="checkbox" id="automatic-toggle">
               <span class="switch" aria-hidden="true"></span>
             </label>
-            <small>仅对允许的网站生效；敏感信息与最终提交仍需即时确认。</small>
+            <small>自动推进仅对白名单生效；登录、填表与上传不重复确认，最终提交前确认一次。</small>
           </article>
         </div>
 
@@ -116,7 +117,7 @@
             <p id="source-sync-copy">正在载入随插件发布的 2027 届秋招职位快照。</p>
           </div>
           <div class="table-wrap">
-            <table class="jobs-table">
+            <table class="jobs-table"><colgroup><col class="col-role"><col class="col-company"><col class="col-city"><col class="col-batch"><col class="col-deadline"><col class="col-time"><col class="col-actions"></colgroup>
               <thead><tr><th>岗位</th><th>公司</th><th>地点</th><th>批次 / 学历</th><th>截止</th><th>更新时间</th><th></th></tr></thead>
               <tbody id="source-jobs-table"></tbody>
             </table>
@@ -127,17 +128,18 @@
       <section class="view" id="view-applications">
         <article class="panel wide-panel">
           <div class="panel-header responsive-header">
-            <div><p class="eyebrow">APPLICATIONS</p><h2>全部投递</h2></div>
+            <div><p class="eyebrow">APPLICATIONS</p><h2>投递记录</h2></div>
             <div class="filters" id="status-filters">
               <button class="filter active" data-status="">全部</button>
-              <button class="filter" data-status="queued">待处理</button>
+              <button class="filter" data-status="pending">未完成</button>
               <button class="filter" data-status="ready_for_review">待确认</button>
               <button class="filter" data-status="submitted">已投递</button>
-              <button class="filter" data-status="failed">失败</button>
+              <button class="filter" data-status="failed">失败</button><button class="filter" data-status="archived">已归档</button>
             </div>
           </div>
+          <p class="section-copy">每条记录对应一份申请。归档仅收起历史待办，不会撤回官网申请。</p>
           <div class="table-wrap">
-            <table>
+            <table class="applications-table"><colgroup><col class="col-role"><col class="col-company"><col class="col-city"><col class="col-status"><col class="col-time"><col class="col-actions"></colgroup>
               <thead><tr><th>岗位</th><th>公司 / 网站</th><th>地点</th><th>状态</th><th>更新时间</th><th></th></tr></thead>
               <tbody id="applications-table"></tbody>
             </table>
@@ -154,6 +156,23 @@
       </section>
 
       <section class="view" id="view-profile">
+        <article class="panel preferences-panel">
+          <div class="panel-header"><div><p class="eyebrow">JOB PREFERENCES</p><h2>求职偏好</h2></div></div>
+          <p class="section-copy">保存后自动带入新任务。关键词按优先顺序填写；招聘公告包含多个方向时，逐个核验实际岗位。</p>
+          <form id="preferences-form" class="form-grid">
+            <label><span>岗位关键词（按优先级，逗号分隔）</span><input name="keywords"></label>
+            <label><span>期望城市</span><input name="locations" placeholder="上海, 杭州"></label>
+            <label><span>排除方向</span><input name="excluded_keywords" placeholder="算法, AI Infra"></label>
+            <label><span>排除公司</span><input name="excluded_companies"></label>
+            <label><span>毕业年份</span><input name="graduation_year" inputmode="numeric"></label>
+            <label><span>招聘类型</span><select name="recruitment_types"><option value="campus">校招</option><option value="intern">实习</option><option value="social">社招</option></select></label>
+            <label><span>用工类型</span><select name="employment_type"><option value="">不限</option><option value="full_time">正式全职</option><option value="intern">实习</option></select></label>
+            <label class="check-label"><input type="checkbox" name="prefer_known_companies">优先知名公司</label>
+            <label class="check-label"><input type="checkbox" name="prefer_phone_login">优先手机号登录</label>
+            <label class="check-label"><input type="checkbox" name="skip_wechat_only">跳过仅支持微信扫码的公司</label>
+            <div class="form-actions full"><button type="submit" class="button primary">保存求职偏好</button></div>
+          </form>
+        </article>
         <article class="panel resume-panel">
           <div class="resume-intro">
             <div class="resume-icon">CV</div>
@@ -193,7 +212,7 @@
             <p>每行一个招聘网站域名。允许的网站可自动进行到最终确认页；留空时所有岗位都会停在提交前。</p>
             <textarea id="allowed-domains" rows="8" placeholder="talent.didiglobal.com&#10;zhaopin.meituan.com"></textarea>
             <button class="button dark" id="save-policy">保存策略</button>
-            <div class="privacy-note"><strong>必须由你确认</strong><span>敏感信息传输、最终提交、CAPTCHA、诚信声明与开放性主观题。</span></div>
+            <div class="privacy-note"><strong>必须由你确认</strong><span>最终提交前确认一次；缺少真实资料或页面要求人工验证时，再请你处理。</span></div>
           </article>
         </div>
       </section>
@@ -202,7 +221,7 @@
 
   <dialog id="application-dialog">
     <form method="dialog" id="application-form">
-      <div class="dialog-header"><div><p class="eyebrow">NEW APPLICATION</p><h2>记录一个岗位</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <div class="dialog-header"><div><p class="eyebrow">NEW APPLICATION</p><h2>记录一个岗位</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
       <label><span>岗位名称</span><input name="title" required></label>
       <label><span>公司</span><input name="company" required></label>
       <label><span>官网岗位链接</span><input name="url" type="url" required></label>
@@ -217,19 +236,19 @@
 
   <dialog id="run-dialog">
     <form method="dialog" id="run-form">
-      <div class="dialog-header"><div><p class="eyebrow">START AUTOPILOT</p><h2>启动本轮任务</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <div class="dialog-header"><div><p class="eyebrow">START AUTOPILOT</p><h2>启动本轮任务</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
       <label><span>执行方式</span><select name="action"><option value="discover_and_apply">找岗并推进投递</option><option value="process_queue">继续处理现有队列</option></select></label>
       <label><span>岗位关键词</span><input name="keywords" placeholder="Agent, 后端"></label>
       <label><span>期望地点</span><input name="locations" placeholder="上海, 杭州"></label>
       <label><span>招聘类型</span><select name="recruitment_type"><option value="campus">校招</option><option value="intern">实习</option><option value="social">社招</option></select></label>
-      <div class="callout"><strong>AI 执行，不是脚本乱点</strong><span>我会理解页面、匹配字段并处理动态表单；敏感信息与最终提交仍按安全规则确认。</span></div>
+      <div class="callout"><strong>AI 执行，不是脚本乱点</strong><span>按已保存的求职偏好筛选与填写；仅在最终提交前确认一次。</span></div>
       <div class="dialog-actions"><span id="run-dialog-message"></span><button class="button primary" value="default">启动任务</button></div>
     </form>
   </dialog>
 
   <dialog id="field-dialog">
     <form method="dialog" id="field-form">
-      <div class="dialog-header"><div><p class="eyebrow">REUSABLE FACT</p><h2>记住一个新字段</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+      <div class="dialog-header"><div><p class="eyebrow">REUSABLE FACT</p><h2>记住一个新字段</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
       <label><span>字段名称</span><input name="label" required placeholder="例如：工作许可说明"></label>
       <label><span>值</span><textarea name="value" rows="3" required></textarea></label>
       <label><span>相近问法 / 别名</span><input name="aliases" placeholder="是否需要签证赞助, Sponsorship required"></label>
@@ -238,6 +257,17 @@
     </form>
   </dialog>
 
+  <dialog id="detail-dialog">
+    <form id="detail-form">
+      <div class="dialog-header"><h2>申请详情</h2><button type="button" class="icon-button" data-close-dialog aria-label="关闭">×</button></div>
+      <input name="application_id" type="hidden">
+      <label><span>实际申请岗位</span><input name="actual_title" required></label>
+      <label><span>实际申请城市</span><input name="actual_locations"></label>
+      <label><span>实际岗位链接</span><input name="actual_url" type="url"></label>
+      <details><summary>原始招聘公告与投递记录</summary><div id="application-source" class="source-detail"></div></details>
+      <div class="dialog-actions"><span id="detail-message"></span><button type="submit" class="button primary">保存修改</button></div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
   <script src="/app.js" defer></script>
 </body>

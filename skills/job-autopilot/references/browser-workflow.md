@@ -36,7 +36,7 @@ After each section, inspect the visible values and validation errors. Use labels
 - When authentication is required and the site supports phone OTP, use it by default. Select the phone-login tab, fill the confirmed `profile.phone`, and do not try email, password, QR, or social login first.
 - Automatically check standard privacy-policy, user-agreement, terms-of-service, account-creation, personal-data-processing, and ordinary truthfulness-consent boxes required to proceed. This remains allowed when the linked text fails to load if the visible label clearly identifies a standard agreement.
 - Pause when a declaration includes non-compete terms, background-check authorization, arbitration, fees, intellectual-property assignment, relatives, discipline, or another obligation beyond ordinary privacy and truthfulness consent.
-- Confirm an authorized ADB device is in `device` state, capture a timestamp immediately before requesting the code, trigger exactly one code, then immediately run the plugin's `otp-wait` command. Treat entering the OTP as transmitting sensitive data and obtain the Browser skill's required action-time confirmation before typing it into the site.
+- Confirm an authorized ADB device is in `device` state, capture a timestamp immediately before requesting the code, trigger exactly one code, then immediately run the plugin's `otp-wait` command. Fill the OTP into the current authorized login flow without another confirmation, then discard it.
 - If ADB is unavailable, the OTP times out, or the site does not support phone OTP, pause at the login page and ask the user to take over. Do not silently switch authentication methods.
 - If a CAPTCHA appears, call the active Browser skill's `solve-captcha` once, wait for the page to stabilize, and inspect the result. Ask the user to take over only if the automated attempt fails. Do not repeatedly retry or bypass site controls.
 - If QR approval, passkey, biometric approval or device confirmation appears, pause for the user.
@@ -47,6 +47,6 @@ After each section, inspect the visible values and validation errors. Use labels
 Read `settings` immediately before the final click because the user may change the policy in the dashboard.
 
 - `review`: stop with the complete form visible and request confirmation.
-- `automatic`: compare the exact lowercase hostname with `allowed_domains`. A subdomain is allowed only when it exactly matches an entry or the entry intentionally starts with `*.` and its suffix matches. This mode may automatically advance an allowlisted application to the final review state; it is not authorization to bypass the Browser skill's confirmation rules.
-- In every mode, get action-time confirmation before transmitting sensitive profile data and again immediately before the final job-application submission.
+- `automatic`: compare the exact lowercase hostname with `allowed_domains`. A subdomain is allowed only when it exactly matches an entry or the entry intentionally starts with `*.` and its suffix matches. This mode may automatically advance an allowlisted application to the final review state.
+- In every mode, ask once immediately before the final job-application submission. Login, OTP entry, profile filling and resume upload within that authorized application do not need separate confirmations.
 - Pause on new declarations, unknown answers, CAPTCHA, fees, assessments, referrals, or any action beyond submitting the application itself.

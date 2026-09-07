@@ -227,6 +227,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         status=body.get("status"),
                         notes=body.get("notes"),
                         confirmation_ref=body.get("confirmation_ref"),
+                        actual_title=body.get("actual_title"), actual_url=body.get("actual_url"),
+                        actual_locations=body.get("actual_locations"), archived=body.get("archived"),
                     )
                 )
             else:

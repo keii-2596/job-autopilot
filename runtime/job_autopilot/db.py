@@ -84,6 +84,9 @@ DEFAULT_SETTINGS = {
         "keywords": ["Agent", "后端"],
         "locations": [],
         "recruitment_types": ["campus"],
+        "excluded_keywords": [], "excluded_companies": [],
+        "graduation_year": "", "employment_type": "",
+        "prefer_phone_login": True, "skip_wechat_only": False, "prefer_known_companies": False,
     },
 }
 
@@ -337,6 +340,15 @@ class Ledger:
                 );
                 """
             )
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(applications)")}
+            for name, definition in {
+                "actual_title": "TEXT NOT NULL DEFAULT ''",
+                "actual_url": "TEXT NOT NULL DEFAULT ''",
+                "actual_locations_json": "TEXT NOT NULL DEFAULT '[]'",
+                "archived": "INTEGER NOT NULL DEFAULT 0",
+            }.items():
+                if name not in columns:
+                    db.execute(f"ALTER TABLE applications ADD COLUMN {name} {definition}")
             for key, value in (
                 ("profile", {}),
                 ("settings", DEFAULT_SETTINGS),
@@ -356,6 +368,10 @@ class Ledger:
         result = dict(row)
         if "locations_json" in result:
             result["locations"] = json.loads(result.pop("locations_json") or "[]")
+        if "actual_locations_json" in result:
+            result["actual_locations"] = json.loads(result.pop("actual_locations_json") or "[]")
+        if "archived" in result:
+            result["archived"] = bool(result["archived"])
         return result
 
     def remember_site(self, url: str, login_method: str = "", notes: str = "") -> None:
@@ -411,7 +427,7 @@ class Ledger:
         now = utc_now()
         with self.connect() as db:
             existing = db.execute(
-                "SELECT * FROM applications WHERE application_key=?", (key,)
+                "SELECT * FROM applications WHERE application_key=? OR actual_url=?", (key, url)
             ).fetchone()
             if existing:
                 result = self._row(existing) or {}
@@ -455,7 +471,7 @@ class Ledger:
         key = application_key(url, jdwatch_id)
         with self.connect() as db:
             row = db.execute(
-                "SELECT * FROM applications WHERE application_key=?", (key,)
+                "SELECT * FROM applications WHERE application_key=? OR actual_url=?", (key, url)
             ).fetchone()
         return {"duplicate": row is not None, "application": self._row(row)}
 
@@ -471,10 +487,22 @@ class Ledger:
         status: str | None = None,
         notes: str | None = None,
         confirmation_ref: str | None = None,
+        actual_title: str | None = None,
+        actual_url: str | None = None,
+        actual_locations: list[str] | None = None,
+        archived: bool | None = None,
     ) -> dict[str, Any]:
         current = self.get_application(app_id)
         if not current:
             raise KeyError(f"application {app_id} not found")
+        if actual_title is not None and (not isinstance(actual_title, str) or not actual_title.strip()):
+            raise ValueError("actual_title must be a non-empty string")
+        if actual_url is not None and actual_url and (urlsplit(actual_url).scheme not in {"http", "https"} or not urlsplit(actual_url).hostname):
+            raise ValueError("actual_url must be an HTTP(S) URL")
+        if actual_locations is not None and (not isinstance(actual_locations, list) or any(not isinstance(x, str) or not x.strip() for x in actual_locations)):
+            raise ValueError("actual_locations must be a list of city names")
+        if archived is not None and not isinstance(archived, bool):
+            raise ValueError("archived must be a boolean")
         next_status = status or current["status"]
         if next_status not in VALID_STATUSES:
             raise ValueError(f"invalid status: {next_status}")
@@ -502,7 +530,15 @@ class Ledger:
                     app_id,
                 ),
             )
-            detail = {"from": current["status"], "to": next_status}
+            edits = {key: value for key, value in {
+                "actual_title": actual_title.strip() if actual_title is not None else None,
+                "actual_url": actual_url,
+                "actual_locations_json": json.dumps(actual_locations, ensure_ascii=False) if actual_locations is not None else None,
+                "archived": int(archived) if archived is not None else None,
+            }.items() if value is not None}
+            if edits:
+                db.execute("UPDATE applications SET " + ", ".join(f"{k}=?" for k in edits) + " WHERE id=?", [*edits.values(), app_id])
+            detail = {"from": current["status"], "to": next_status, "changes": edits}
             if confirmation_ref:
                 detail["confirmation_ref"] = confirmation_ref
             db.execute(
@@ -550,7 +586,10 @@ class Ledger:
             }
             total = db.execute("SELECT COUNT(*) FROM applications").fetchone()[0]
             sites = db.execute("SELECT COUNT(*) FROM sites").fetchone()[0]
-        return {"total": total, "sites": sites, "by_status": counts}
+        with self.connect() as db:
+            active_counts = {row["status"]: row["count"] for row in db.execute("SELECT status, COUNT(*) AS count FROM applications WHERE archived=0 GROUP BY status")}
+            archived = db.execute("SELECT COUNT(*) FROM applications WHERE archived=1").fetchone()[0]
+        return {"total": total, "sites": sites, "by_status": counts, "unarchived_by_status": active_counts, "archived": archived}
 
     @staticmethod
     def _source_job_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -809,7 +848,7 @@ class Ledger:
         with self.connect() as db:
             row = db.execute(
                 """
-                SELECT r.*, a.title AS application_title, a.company AS application_company
+                SELECT r.*, COALESCE(NULLIF(a.actual_title, ''), a.title) AS application_title, a.company AS application_company
                 FROM activity_runs r
                 LEFT JOIN applications a ON a.id=r.application_id
                 WHERE r.run_id=?
@@ -893,7 +932,7 @@ class Ledger:
         with self.connect() as db:
             rows = db.execute(
                 """
-                SELECT r.*, a.title AS application_title, a.company AS application_company
+                SELECT r.*, COALESCE(NULLIF(a.actual_title, ''), a.title) AS application_title, a.company AS application_company
                 FROM activity_runs r
                 LEFT JOIN applications a ON a.id=r.application_id
                 ORDER BY CASE WHEN r.state IN ('requested','running','waiting','paused') THEN 0 ELSE 1 END,
@@ -908,7 +947,7 @@ class Ledger:
         with self.connect() as db:
             rows = db.execute(
                 """
-                SELECT e.*, a.title AS application_title, a.company AS application_company
+                SELECT e.*, COALESCE(NULLIF(a.actual_title, ''), a.title) AS application_title, a.company AS application_company
                 FROM activity_events e
                 LEFT JOIN applications a ON a.id=e.application_id
                 WHERE e.run_id=? ORDER BY e.id DESC LIMIT ?
@@ -1037,7 +1076,7 @@ class Ledger:
             "action": action,
             "request_id": request_id,
             "activity_run_id": activity["run_id"],
-            "criteria": criteria or {},
+            "criteria": {**self.settings()["job_preferences"], **(criteria or {})},
             "message": "等待 Codex 接管",
             "requested_at": now,
             "updated_at": now,
@@ -1196,10 +1235,32 @@ class Ledger:
 
     def settings(self) -> dict[str, Any]:
         current = self.get_kv("settings", DEFAULT_SETTINGS.copy())
-        return {**DEFAULT_SETTINGS, **current}
+        return {**DEFAULT_SETTINGS, **current, "job_preferences": {
+            **DEFAULT_SETTINGS["job_preferences"], **current.get("job_preferences", {})
+        }}
 
     def update_settings(self, data: dict[str, Any]) -> dict[str, Any]:
         current = self.settings()
+        data = dict(data)
+        if "job_preferences" in data:
+            preferences = data["job_preferences"]
+            if not isinstance(preferences, dict):
+                raise ValueError("job_preferences must be an object")
+            preferences = {**current["job_preferences"], **preferences}
+            for key in ("keywords", "locations", "recruitment_types", "excluded_keywords", "excluded_companies"):
+                value = preferences[key]
+                if not isinstance(value, list) or any(not isinstance(x, str) for x in value):
+                    raise ValueError(f"{key} must be a list of strings")
+                preferences[key] = list(dict.fromkeys(x.strip() for x in value if x.strip()))
+            if any(x not in {"campus", "intern", "social"} for x in preferences["recruitment_types"]):
+                raise ValueError("invalid recruitment_types")
+            for key in ("prefer_phone_login", "skip_wechat_only", "prefer_known_companies"):
+                if not isinstance(preferences[key], bool):
+                    raise ValueError(f"{key} must be a boolean")
+            for key in ("graduation_year", "employment_type"):
+                if not isinstance(preferences[key], str):
+                    raise ValueError(f"{key} must be a string")
+            data["job_preferences"] = preferences
         current.update(data)
         mode = current.get("submission_mode")
         if mode not in {"review", "automatic"}:

@@ -204,7 +204,7 @@
           </div>
         </form>
         <div class="notice" id="notice" role="status"></div>
-        <div class="guard">最终提交、敏感信息传输、验证码和新的诚信声明仍会停下来向你确认。</div>
+        <div class="guard">登录、验证码、填表和上传不重复确认；最终提交前确认一次，缺少资料或需要人工验证时再询问。</div>
       </article>
 
       <article class="panel">
@@ -262,7 +262,7 @@
       const required = ["name", "phone", "email", "school", "degree", "major", "graduation_year", "resume_path"];
       const missing = required.filter((key) => !profile[key]);
       const byStatus = {};
-      applications.forEach((item) => { byStatus[item.status] = (byStatus[item.status] || 0) + 1; });
+      applications.filter(item => !item.archived).forEach((item) => { byStatus[item.status] = (byStatus[item.status] || 0) + 1; });
       return {
         summary: { total: applications.length, by_status: byStatus },
         source_jobs_summary: sourceJobsSummary,
@@ -285,6 +285,7 @@
         settings: {
           submission_mode: settings.submission_mode || "review",
           allowed_domains_count: (settings.allowed_domains || []).length,
+          job_preferences: settings.job_preferences || {},
         },
       };
     }
@@ -320,8 +321,8 @@
             body: JSON.stringify({
               action: args.action || "process_queue",
               criteria: {
-                keywords: args.keywords || [],
-                locations: args.locations || [],
+                keywords: args.keywords ?? currentState?.settings?.job_preferences?.keywords ?? [],
+                locations: args.locations ?? currentState?.settings?.job_preferences?.locations ?? [],
                 recruitment_type: args.recruitment_type || "campus",
               },
             }),
@@ -363,8 +364,15 @@
 
     function render(state) {
       if (!state || !state.summary) return;
+      if (!currentState) {
+        const preferences = state.settings?.job_preferences || {};
+        const form = document.querySelector("#start-form");
+        form.elements.keywords.value = (preferences.keywords || []).join(", ");
+        form.elements.locations.value = (preferences.locations || []).join(", ");
+        form.elements.recruitment_type.value = preferences.recruitment_types?.[0] || "campus";
+      }
       currentState = state;
-      const counts = state.summary.by_status || {};
+      const counts = state.summary.unarchived_by_status || state.summary.by_status || {};
       const queue = ["discovered", "queued", "opened", "auth_required", "form_filling"]
         .reduce((sum, key) => sum + Number(counts[key] || 0), 0);
       document.querySelector("#total-count").textContent = state.source_jobs_summary?.total || 0;
@@ -416,11 +424,11 @@
         form_filling: "填写中", ready_for_review: "待确认", submitted: "已投递", failed: "失败",
         ignored: "已忽略", withdrawn: "已撤回",
       };
-      const applications = (state.applications || []).slice(0, 6);
+      const applications = (state.applications || []).filter(item => !item.archived).slice(0, 6);
       document.querySelector("#jobs-list").innerHTML = applications.length ? applications.map((item) => `
         <div class="job">
-          <strong>${esc(item.title)}</strong><em>${esc(statuses[item.status] || item.status)}</em>
-          <small>${esc(item.company)}${item.locations?.length ? ` · ${esc(item.locations.join("、"))}` : ""}</small>
+          <strong>${esc(item.actual_title || item.title)}</strong><em>${esc(statuses[item.status] || item.status)}</em>
+          <small>${esc(item.company)}${(item.actual_title ? item.actual_locations : item.locations)?.length ? ` · ${esc((item.actual_title ? item.actual_locations : item.locations).join("、"))}` : ""}</small>
         </div>
       `).join("") : '<div class="profile-copy">还没有岗位。可以从上方启动一次校招搜索。</div>';
     }

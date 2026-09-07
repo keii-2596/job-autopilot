@@ -84,6 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
     update.add_argument("--status", choices=sorted(VALID_STATUSES))
     update.add_argument("--notes")
     update.add_argument("--confirmation-ref")
+    update.add_argument("--actual-title")
+    update.add_argument("--actual-url")
+    update.add_argument("--actual-location", action="append")
+    archive = update.add_mutually_exclusive_group()
+    archive.add_argument("--archive", dest="archived", action="store_true", default=None)
+    archive.add_argument("--unarchive", dest="archived", action="store_false")
 
     listing = sub.add_parser("list", help="List applications")
     listing.add_argument("--status", choices=sorted(VALID_STATUSES))
@@ -259,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
                     status=args.status,
                     notes=args.notes,
                     confirmation_ref=args.confirmation_ref,
+                    actual_title=args.actual_title, actual_url=args.actual_url,
+                    actual_locations=args.actual_location, archived=args.archived,
                 )
             )
         elif args.command == "list":

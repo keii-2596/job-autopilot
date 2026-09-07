@@ -57,7 +57,8 @@ class CodexRunControllerTests(unittest.TestCase):
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
             current = self.ledger.codex_runtime()
-            if current["state"] == expected:
+            activity = self.ledger.activity_snapshot().get("current")
+            if current["state"] == expected and activity and activity["state"] == expected:
                 return current
             time.sleep(0.01)
         self.fail(f"Codex runtime never reached {expected}")
