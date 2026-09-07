@@ -33,8 +33,13 @@ After each section, inspect the visible values and validation errors. Use labels
 ## Authentication
 
 - Reuse an existing authenticated browser session when available.
-- When phone OTP is required, trigger one code, then use the plugin's `otp-wait` command with a timestamp captured immediately before the request. Treat entering the OTP as transmitting sensitive data and obtain the Browser skill's required action-time confirmation before typing it into the site.
-- If CAPTCHA, QR approval, passkey, biometric approval or device confirmation appears, pause for the user.
+- When authentication is required and the site supports phone OTP, use it by default. Select the phone-login tab, fill the confirmed `profile.phone`, and do not try email, password, QR, or social login first.
+- Automatically check standard privacy-policy, user-agreement, terms-of-service, account-creation, personal-data-processing, and ordinary truthfulness-consent boxes required to proceed. This remains allowed when the linked text fails to load if the visible label clearly identifies a standard agreement.
+- Pause when a declaration includes non-compete terms, background-check authorization, arbitration, fees, intellectual-property assignment, relatives, discipline, or another obligation beyond ordinary privacy and truthfulness consent.
+- Confirm an authorized ADB device is in `device` state, capture a timestamp immediately before requesting the code, trigger exactly one code, then immediately run the plugin's `otp-wait` command. Treat entering the OTP as transmitting sensitive data and obtain the Browser skill's required action-time confirmation before typing it into the site.
+- If ADB is unavailable, the OTP times out, or the site does not support phone OTP, pause at the login page and ask the user to take over. Do not silently switch authentication methods.
+- If a CAPTCHA appears, call the active Browser skill's `solve-captcha` once, wait for the page to stabilize, and inspect the result. Ask the user to take over only if the automated attempt fails. Do not repeatedly retry or bypass site controls.
+- If QR approval, passkey, biometric approval or device confirmation appears, pause for the user.
 - Never inspect browser password stores, cookies, local storage or unrelated account data.
 
 ## Final submission

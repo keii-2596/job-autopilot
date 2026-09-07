@@ -94,8 +94,56 @@ class LedgerTests(unittest.TestCase):
         )
         self.assertEqual(settings["submission_mode"], "automatic")
         self.assertEqual(settings["allowed_domains"], ["jobs.example.com"])
+        self.assertEqual(settings["login_method"], "phone_otp")
+        self.assertTrue(settings["autofill_profile_phone"])
+        self.assertTrue(settings["read_otp_via_adb"])
+        self.assertTrue(settings["auto_accept_standard_agreements"])
+        self.assertTrue(settings["solve_captcha_automatically"])
         with self.assertRaises(ValueError):
             self.ledger.update_settings({"submission_mode": "reckless"})
+        with self.assertRaises(ValueError):
+            self.ledger.update_settings({"login_method": "email"})
+        with self.assertRaises(ValueError):
+            self.ledger.update_settings({"read_otp_via_adb": "yes"})
+        with self.assertRaises(ValueError):
+            self.ledger.update_settings({"auto_accept_standard_agreements": "yes"})
+        with self.assertRaises(ValueError):
+            self.ledger.update_settings({"solve_captcha_automatically": "yes"})
+
+    def test_source_jobs_support_multiple_keywords_and_locations(self):
+        self.ledger.upsert_source_jobs(
+            [
+                {
+                    "source": "baigua",
+                    "source_key": "agent-shanghai",
+                    "company_name": "示例公司",
+                    "title": "Agent 平台工程师",
+                    "locations": ["上海"],
+                },
+                {
+                    "source": "baigua",
+                    "source_key": "backend-hangzhou",
+                    "company_name": "另一家公司",
+                    "title": "后端开发工程师",
+                    "locations": ["杭州"],
+                },
+                {
+                    "source": "baigua",
+                    "source_key": "sales-beijing",
+                    "company_name": "第三家公司",
+                    "title": "销售培训生",
+                    "locations": ["北京"],
+                },
+            ]
+        )
+
+        matches = self.ledger.list_source_jobs(
+            query="Agent,后端", location="上海、杭州", limit=10
+        )
+        self.assertEqual(
+            {item["source_key"] for item in matches},
+            {"agent-shanghai", "backend-hangzhou"},
+        )
 
     def test_application_requires_real_identity_fields_and_url(self):
         with self.assertRaisesRegex(ValueError, "title is required"):

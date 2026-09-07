@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     source_jobs = sub.add_parser("source-jobs", help="List locally synced source jobs")
     source_jobs.add_argument("--query", default="")
+    source_jobs.add_argument("--location", default="")
     source_jobs.add_argument("--limit", type=int, default=200)
     source_jobs.add_argument("--offset", type=int, default=0)
     sub.add_parser("source-jobs-summary", help="Show the synced source job summary")
@@ -223,6 +224,7 @@ def main(argv: list[str] | None = None) -> int:
             emit(
                 ledger.list_source_jobs(
                     query=args.query,
+                    location=args.location,
                     limit=args.limit,
                     offset=args.offset,
                 )

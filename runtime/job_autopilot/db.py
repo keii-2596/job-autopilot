@@ -75,6 +75,11 @@ TRACKING_QUERY_KEYS = {
 DEFAULT_SETTINGS = {
     "submission_mode": "review",
     "allowed_domains": [],
+    "login_method": "phone_otp",
+    "autofill_profile_phone": True,
+    "read_otp_via_adb": True,
+    "auto_accept_standard_agreements": True,
+    "solve_captcha_automatically": True,
     "job_preferences": {
         "keywords": ["Agent", "后端"],
         "locations": [],
@@ -644,6 +649,7 @@ class Ledger:
         *,
         source: str = "baigua",
         query: str = "",
+        location: str = "",
         direction: str = "",
         limit: int = 200,
         offset: int = 0,
@@ -657,10 +663,20 @@ class Ledger:
             for term in terms:
                 pattern = f"%{term}%"
                 params.extend([pattern, pattern, pattern, pattern])
-        if query.strip():
-            pattern = f"%{query.strip()}%"
-            sql += " AND (company_name LIKE ? OR title LIKE ? OR industry LIKE ?)"
-            params.extend([pattern, pattern, pattern])
+        query_terms = [term for term in re.split(r"[\s,，、]+", query.strip()) if term]
+        if query_terms:
+            searchable = (
+                "(company_name LIKE ? OR title LIKE ? OR title_items_json LIKE ? "
+                "OR industry LIKE ? OR notes LIKE ? OR major_requirements LIKE ?)"
+            )
+            sql += " AND (" + " OR ".join(searchable for _ in query_terms) + ")"
+            for term in query_terms:
+                pattern = f"%{term}%"
+                params.extend([pattern] * 6)
+        location_terms = [term for term in re.split(r"[\s,，、]+", location.strip()) if term]
+        if location_terms:
+            sql += " AND (" + " OR ".join("locations_json LIKE ?" for _ in location_terms) + ")"
+            params.extend(f"%{term}%" for term in location_terms)
         sql += " ORDER BY COALESCE(source_updated_at, updated_at) DESC, id DESC LIMIT ? OFFSET ?"
         params.extend([max(1, min(int(limit), 1000)), max(0, int(offset))])
         with self.connect() as db:
@@ -1192,4 +1208,14 @@ class Ledger:
         if not isinstance(domains, list):
             raise ValueError("allowed_domains must be a list")
         current["allowed_domains"] = sorted({str(d).strip().lower() for d in domains if str(d).strip()})
+        if current.get("login_method") != "phone_otp":
+            raise ValueError("login_method must be phone_otp")
+        for key in (
+            "autofill_profile_phone",
+            "read_otp_via_adb",
+            "auto_accept_standard_agreements",
+            "solve_captcha_automatically",
+        ):
+            if not isinstance(current.get(key), bool):
+                raise ValueError(f"{key} must be a boolean")
         return self.set_kv("settings", current)
