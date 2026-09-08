@@ -6,7 +6,7 @@ import os
 import re
 import sqlite3
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -622,10 +622,10 @@ class Ledger:
             result[target] = json.loads(result.pop(column) or "[]")
         return result
 
-    def upsert_source_jobs(self, jobs: list[dict[str, Any]]) -> dict[str, int]:
+    def upsert_source_jobs(self, jobs: list[dict[str, Any]], *, _connection=None) -> dict[str, int]:
         counts = {"created": 0, "changed": 0, "unchanged": 0}
         now = utc_now()
-        with self.connect() as db:
+        with (self.connect() if _connection is None else nullcontext(_connection)) as db:
             for job in jobs:
                 source = str(job.get("source") or "").strip()
                 source_key = str(job.get("source_key") or "").strip()
@@ -1157,10 +1157,52 @@ class Ledger:
             "message": "等待 AI 解析",
             "requested_at": now,
             "updated_at": now,
+            "source": source,
+            "agent_messages": [],
+            "progress_events": [{"status": "requested", "message": "解析请求已创建", "at": now}],
         }
-        self.set_kv("profile_import", request)
-        self.request_automation("parse_resume", {"resume_path": str(path)}, source=source)
-        return request
+        automation = self.request_automation("parse_resume", {"resume_path": str(path)}, source=source)
+        request["automation_request_id"] = automation["request_id"]
+        request["activity_run_id"] = automation["activity_run_id"]
+        return self.set_kv("profile_import", request)
+
+    def update_profile_import_progress(self, request_id: str, *, status: str = "",
+                                       message: str = "", item_id: str = "",
+                                       delta: str = "", text: str | None = None) -> dict[str, Any]:
+        """Update only the matching import, never overwrite reviewed suggestions.
+
+        Only user-visible agent messages belong here, not reasoning or tool output.
+        Serialize read/modify/write against CLI candidate completion and SSE readers.
+        """
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT value_json FROM kv WHERE key='profile_import'").fetchone()
+            current = json.loads(row["value_json"]) if row else {}
+            if not request_id or current.get("request_id") != request_id:
+                return current
+            # Late startup acknowledgements must not resurrect an ended import.
+            # Retrying creates a new request_id, rather than reusing a paused import.
+            terminal = current.get("status") in {"ready_for_review", "applied", "paused", "failed"}
+            if terminal and not (delta or text is not None):
+                return current
+            now = utc_now()
+            if status and not terminal and (current.get("status") != status or current.get("message") != message):
+                events = current.get("progress_events") or []
+                events.append({"status": status, "message": message, "at": now})
+                current.update(status=status, message=message, progress_events=events[-30:])
+            if delta or text is not None:
+                messages = current.get("agent_messages") or []
+                identity = item_id or "agent"
+                entry = next((item for item in messages if item["id"] == identity), None)
+                if entry is None:
+                    entry = {"id": identity, "text": ""}
+                    messages.append(entry)
+                entry["text"] = (text if text is not None else entry["text"] + delta)[-6000:]
+                current["agent_messages"] = messages[-20:]
+            current["updated_at"] = now
+            db.execute("UPDATE kv SET value_json=?, updated_at=? WHERE key='profile_import'",
+                       (json.dumps(current, ensure_ascii=False), now))
+            return current
 
     def complete_profile_import(
         self, suggestions: list[dict[str, Any]], message: str = ""
@@ -1187,6 +1229,11 @@ class Ledger:
                 }
             )
         current = self.profile_import()
+        if not cleaned:
+            return self.update_profile_import_progress(
+                str(current.get("request_id") or ""), status="failed",
+                message=message or "未提取到可确认的资料字段，请检查简历内容后重试。",
+            )
         current.update(
             {
                 "status": "ready_for_review",
@@ -1195,6 +1242,9 @@ class Ledger:
                 "updated_at": utc_now(),
             }
         )
+        current["progress_events"] = (current.get("progress_events", []) + [{
+            "status": "ready_for_review", "message": "已生成候选字段，等待你确认", "at": utc_now(),
+        }])[-30:]
         self.set_automation_state("completed", "简历已解析，等待确认")
         return self.set_kv("profile_import", current)
 

@@ -20,6 +20,7 @@
         <button class="nav-item" data-view="applications"><span>◎</span>投递记录</button>
         <button class="nav-item" data-view="sites"><span>↗</span>招聘网站</button>
         <button class="nav-item" data-view="profile"><span>◌</span>个人资料</button>
+        <button class="nav-item" data-view="updates"><span>↓</span>插件更新</button>
       </nav>
       <div class="sidebar-note">
         <span class="status-dot"></span>
@@ -55,12 +56,21 @@
           </div>
           <form id="approval-form" class="approval-form"></form>
         </article>
-        <article class="codex-chat panel">
+        <article class="codex-chat panel" id="codex-chat" data-state="idle">
           <div class="codex-chat-heading">
             <div><p class="eyebrow">CODEX CONVERSATION</p><h2>直接和 Codex 对话</h2></div>
             <div class="codex-chat-actions"><span class="codex-connection" id="codex-connection">正在连接</span><button type="button" class="button ghost" id="codex-release-button" disabled>移交桌面</button></div>
           </div>
+          <div class="codex-state-line" role="status"><span class="execution-dot" aria-hidden="true"></span><strong id="codex-state-title">尚未运行</strong><span id="codex-state-hint">发送消息后启动</span></div>
           <div class="codex-reply" id="codex-reply" aria-live="polite">你可以从这里下达找岗、筛选、投递和资料整理指令。</div>
+          <div class="codex-shortcuts" aria-label="快捷指令">
+            <button class="button ghost" type="button" data-quick-message="继续">继续</button>
+            <button class="button ghost" type="button" data-quick-message="帮我投简历">帮我投简历</button>
+            <button class="button ghost" type="button" data-quick-message="按已保存的求职偏好帮我找岗位，先展示匹配结果，不提交申请。">帮我找岗位</button>
+            <button class="button ghost" type="button" data-quick-message="汇总当前投递进展和待处理事项。">查看进展</button>
+            <button class="button approve" type="button" id="codex-quick-authorize" disabled>授权本次</button>
+          </div>
+          <p id="quick-authorization-copy" class="codex-chat-note">有明确权限请求时，才可授权本次操作。</p>
           <form class="codex-chat-form" id="codex-chat-form">
             <textarea id="codex-chat-input" aria-label="发送给 Codex 的消息" rows="2" maxlength="8000" placeholder="例如：只看上海和杭州的 Agent / 后端校招岗位，并把合适的加入待投递"></textarea>
             <button class="button primary" id="codex-send-button" type="submit">发送给 Codex</button>
@@ -137,6 +147,12 @@
               <input id="source-job-query" type="search" placeholder="搜索公司、岗位或行业">
             </div>
           </div>
+          <section class="library-sync" aria-label="GitHub 职位库同步">
+            <div class="library-sync-heading"><div><strong>GitHub 职位数据</strong><small>只同步公开的 2027 届秋招岗位，不更新插件代码。</small></div><button type="button" class="button ghost" id="sync-github-jobs">从 GitHub 增量同步</button></div>
+            <p id="github-jobs-sync-message" role="status">尚未从 GitHub 同步职位</p>
+            <div class="library-sync-meta"><span id="github-jobs-sync-version">—</span><span id="github-jobs-sync-time">—</span></div>
+            <label class="check-label"><input type="checkbox" id="auto-sync-github-jobs"><span>自动同步职位数据 <small>后台运行时每 6 小时检查；与插件自动更新开关独立。</small></span></label>
+          </section>
           <div class="source-summary">
             <div><strong id="source-total">0</strong><span>匹配职位</span></div>
             <p id="source-sync-copy">正在载入随插件发布的 2027 届秋招职位快照。</p>
@@ -207,6 +223,15 @@
             <span id="resume-file-label">先在下方填写简历绝对路径</span>
             <button class="button dark compact" id="parse-resume" type="button">AI 解析简历</button>
           </div>
+          <small id="resume-action-hint" class="codex-chat-note"></small>
+          <section class="resume-progress" id="resume-progress" hidden aria-label="简历解析进度">
+            <div class="resume-progress-heading"><strong id="resume-progress-title" role="status"></strong><small id="resume-progress-time"></small></div>
+            <p id="resume-progress-message"></p>
+            <ol id="resume-progress-events" class="resume-progress-events"></ol>
+            <div class="resume-stream-heading"><strong>Codex 实时回复</strong><small id="resume-stream-connection">连接中</small></div>
+            <div id="resume-stream" class="resume-stream" role="log" aria-live="polite" aria-label="Codex 简历解析回复"></div>
+            <button type="button" class="button ghost" id="resume-show-approval" hidden>查看并回答确认项</button>
+          </section>
           <div id="resume-suggestions" class="resume-suggestions"></div>
         </article>
         <div class="profile-grid">
@@ -242,6 +267,21 @@
             <form id="codex-project-form" class="project-settings"><h2>网页会话所属项目</h2><p>选择 Codex 中已有项目，下一次网页发送或启动时生效。</p><button type="button" class="button ghost" id="load-codex-projects">选择已有项目</button><label id="codex-project-picker-label" hidden><span>已有项目</span><select id="codex-project-picker" aria-label="已有项目"></select></label><label><span>项目目录</span><input id="codex-project-path" placeholder="选择项目后自动填入" autocomplete="off"></label><button class="button dark" type="submit">保存项目归属</button><small id="codex-project-result" role="status"></small></form>
           </article>
         </div>
+      </section>
+      <section class="view" id="view-updates">
+        <article class="panel update-panel" id="update-panel" data-state="idle">
+          <div class="panel-header"><div><p class="eyebrow">GITHUB UPDATES</p><h2>让 Autopilot 保持更新。</h2></div><span class="update-badge" id="update-state">尚未检查</span></div>
+          <p class="section-copy">从固定的公开仓库获取更新。保留你的个人资料、投递记录和本地爬虫；有本地修改冲突时，停止更新并提示。</p>
+          <a class="update-repository" href="https://github.com/keii-2596/job-autopilot" target="_blank" rel="noopener noreferrer">keii-2596 / job-autopilot ↗ <small>main 分支</small></a>
+          <dl class="update-versions"><div><dt>当前插件版本</dt><dd id="update-current-version">—</dd></div><div><dt>本地基准提交</dt><dd id="update-base-commit">—</dd></div><div><dt>远程最新提交</dt><dd id="update-latest-commit">—</dd></div><div><dt>最近检查</dt><dd id="update-check-time">—</dd></div></dl>
+          <div class="update-status" role="status"><strong id="update-message">尚未检查远程更新</strong><p id="update-release-note"></p></div>
+          <div id="update-task-guard" class="update-task-guard" aria-label="更新前任务核对" hidden></div>
+          <p class="codex-chat-note">更新不需要连接 Codex。已暂停或已停止的网页任务不会阻挡安装；其他对话的遗留记录会单独提示核实。</p>
+          <div class="update-actions"><button class="button ghost" type="button" id="check-updates">检查更新</button><button class="button primary" type="button" id="install-update" disabled>安装更新并重启</button></div>
+          <label class="check-label update-auto"><input type="checkbox" id="auto-update"><span>自动更新 <small>后台运行时每 6 小时检查，仅在任务空闲时安装。开启即允许安装此仓库后续代码更新。</small></span></label>
+          <p class="codex-chat-note" id="update-backup"></p>
+          <p class="codex-chat-note">自动更新默认关闭。安装前会备份将要改动的源文件，失败时恢复；不会上传本地数据。更新后网页会重连，新版技能和工具请在新 Codex 对话中使用。</p>
+        </article>
       </section>
     </main>
   </div>

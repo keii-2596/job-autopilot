@@ -72,7 +72,9 @@ class CodexRunControllerTests(unittest.TestCase):
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
             current = self.ledger.codex_runtime()
-            if current["state"] == expected:
+            # Startup persists runtime, import and activity in successive writes.
+            # Wait for the fake startup to finish before injecting later events.
+            if current["state"] == expected and not self.controller._run_lock.locked():
                 return current
             time.sleep(0.01)
         self.fail(f"Codex runtime never reached {expected}")
@@ -245,6 +247,86 @@ class CodexRunControllerTests(unittest.TestCase):
         self.assertEqual(self.ledger.automation()["state"], "completed")
         run_id = self.ledger.automation()["activity_run_id"]
         self.assertEqual(self.ledger.get_activity(run_id)["state"], "completed")
+
+    def make_resume(self):
+        path = self.root / "resume.txt"
+        path.write_text("Test candidate, backend developer", encoding="utf-8")
+        return str(path)
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_busy_resume_and_run_requests_do_not_overwrite_any_records(self, _which):
+        original = self.ledger.request_automation("process_queue")
+        original_import = self.ledger.profile_import()
+        for status in self.controller.ACTIVE_STATES:
+            self.ledger.set_codex_runtime(state=status)
+            # Starting is protected even before the subprocess has connected.
+            with self.assertRaisesRegex(RuntimeError, "当前任务未被更改"):
+                self.controller.request_resume(self.make_resume())
+            with self.assertRaises(RuntimeError):
+                self.controller.request_run("discover_and_apply", {})
+            self.assertEqual(self.ledger.automation(), original)
+            self.assertEqual(self.ledger.profile_import(), original_import)
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_resume_stream_is_correlated_and_keeps_review_results(self, _which):
+        self.controller.request_resume(self.make_resume())
+        self.wait_for_runtime_state("running")
+        request = self.ledger.profile_import()
+        self.assertEqual(request["status"], "running")
+        self.assertEqual(request["automation_request_id"], self.ledger.automation()["request_id"])
+        self.assertEqual(self.ledger.codex_runtime()["resume_request_id"], request["request_id"])
+        prompt = next(p for m, p in self.client.requests if m == "turn/start")["input"][0]["text"]
+        self.assertIn("本轮只解析简历", prompt)
+        for delta in ["正在读取", "简历"]:
+            self.controller._handle_message({"method": "item/agentMessage/delta", "params": {
+                "threadId": "thread-1", "turnId": "turn-1", "itemId": "msg-1", "delta": delta,
+            }})
+        self.controller._handle_message({"method": "item/agentMessage/delta", "params": {
+            "threadId": "unrelated", "itemId": "msg-1", "delta": "不要串入这段回复",
+        }})
+        self.assertEqual(self.ledger.profile_import()["agent_messages"][0]["text"], "正在读取简历")
+        self.controller._handle_message({"id": 31, "method": "item/permissions/requestApproval", "params": {"reason": "读取简历", "permissions": {"fileSystem": {"read": ["/test/resume"]}}}})
+        self.assertEqual(self.ledger.profile_import()["status"], "awaiting_input")
+        self.controller.answer("31", {}, "accept")
+        self.assertEqual(self.ledger.profile_import()["status"], "running")
+        self.assertEqual(self.client.responses[-1][1]["scope"], "turn")
+        self.ledger.complete_profile_import([{"label": "姓名", "target_key": "name", "value": "测试姓名"}])
+        self.controller._handle_message({"method": "item/completed", "params": {"item": {
+            "id": "msg-2", "type": "agentMessage", "text": "提取完成，请确认字段",
+        }}})
+        self.controller._handle_message({"method": "turn/completed", "params": {"turn": {"status": "completed"}}})
+        pending = self.ledger.profile_import()
+        self.assertEqual(pending["status"], "ready_for_review")
+        self.assertEqual(pending["agent_messages"][-1]["text"], "提取完成，请确认字段")
+        self.assertNotEqual(self.ledger.profile().get("name"), "测试姓名")
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_resume_without_candidates_is_failed_not_forever_waiting(self, _which):
+        self.controller.request_resume(self.make_resume())
+        self.wait_for_runtime_state("running")
+        self.controller._handle_message({"method": "turn/completed", "params": {"turn": {"status": "completed"}}})
+        self.assertEqual(self.ledger.profile_import()["status"], "failed")
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_resume_pause_restart_and_other_turn_are_isolated(self, _which):
+        self.controller.request_resume(self.make_resume())
+        self.wait_for_runtime_state("running")
+        self.controller.pause()
+        self.assertEqual(self.ledger.profile_import()["status"], "paused")
+        self.controller.send_message("帮我找岗位")
+        self.wait_for_runtime_state("running")
+        self.controller._handle_message({"method": "item/agentMessage/delta", "params": {"delta": "找岗进展"}})
+        self.assertEqual(self.ledger.profile_import()["agent_messages"], [])
+        self.ledger.request_profile_import(self.make_resume(), source="web_app_server")
+        restarted = CodexRunController(self.ledger, self.root, FakeClient())
+        self.assertEqual(self.ledger.profile_import()["status"], "paused")
+        restarted.close()
+
+    def test_stale_import_updates_are_ignored(self):
+        original = self.ledger.request_profile_import(self.make_resume())
+        new = self.ledger.request_profile_import(self.make_resume())
+        self.ledger.update_profile_import_progress(original["request_id"], status="failed", message="旧请求", delta="old")
+        self.assertEqual(self.ledger.profile_import(), new)
 
 
 if __name__ == "__main__":

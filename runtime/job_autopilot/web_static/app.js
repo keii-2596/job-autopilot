@@ -179,6 +179,48 @@ function renderSourceJobs() {
   }));
 }
 
+function renderLibrarySync() {
+  const sync = state.librarySync || {};
+  const active = ["checking", "downloading", "merging"].includes(sync.state);
+  const button = document.querySelector("#sync-github-jobs");
+  button.disabled = active || state.sendingLibrarySync;
+  button.textContent = active ? "正在同步…" : "从 GitHub 增量同步";
+  document.querySelector("#github-jobs-sync-message").textContent = sync.message || "尚未从 GitHub 同步职位";
+  document.querySelector("#github-jobs-sync-version").textContent = sync.synced_commit ? `数据提交：${sync.synced_commit.slice(0, 8)}` : "数据来源：GitHub · data/jobs.json";
+  document.querySelector("#github-jobs-sync-time").textContent = sync.checked_at ? `最近检查：${formatTime(sync.checked_at)}` : "尚未检查";
+  const toggle = document.querySelector("#auto-sync-github-jobs");
+  toggle.disabled = Boolean(state.sendingLibrarySync);
+  if (!state.sendingLibrarySync) toggle.checked = Boolean(sync.auto_sync);
+}
+
+async function loadLibrarySync() {
+  if (state.loadingLibrarySync || state.sendingLibrarySync) return;
+  state.loadingLibrarySync = true;
+  const revision = state.librarySyncRevision || 0;
+  try {
+    const previous = state.librarySync || {};
+    const sync = await api("/api/job-library-sync");
+    if (revision !== (state.librarySyncRevision || 0)) return;
+    state.librarySync = sync; renderLibrarySync();
+    if (sync.state === "completed" && (previous.synced_commit !== sync.synced_commit || ["checking", "downloading", "merging"].includes(previous.state))) await loadSourceJobs();
+  } catch (error) { document.querySelector("#github-jobs-sync-message").textContent = `同步状态暂时不可用：${error.message}`; }
+  finally { state.loadingLibrarySync = false; }
+}
+
+async function librarySyncAction(action, body = {}) {
+  if (state.sendingLibrarySync) return;
+  state.librarySyncRevision = (state.librarySyncRevision || 0) + 1;
+  state.sendingLibrarySync = true; renderLibrarySync();
+  try {
+    state.librarySync = await api(`/api/job-library-sync/${action}`, {method: "POST", headers: {"X-Job-Autopilot": "dashboard"}, body: JSON.stringify(body)});
+    if (action === "settings") toast(state.librarySync.auto_sync ? "已开启职位数据自动同步" : "职位数据自动同步已关闭");
+    if (action === "start" && state.librarySync.state === "completed") await loadSourceJobs();
+  } catch (error) { toast(error.message); }
+  finally { state.sendingLibrarySync = false; state.librarySyncRevision += 1; renderLibrarySync(); }
+}
+document.querySelector("#sync-github-jobs").addEventListener("click", () => librarySyncAction("start"));
+document.querySelector("#auto-sync-github-jobs").addEventListener("change", event => librarySyncAction("settings", {auto_sync: event.target.checked}));
+
 async function loadSourceJobs() {
   const query = encodeURIComponent(state.sourceJobQuery || "");
   const direction = encodeURIComponent(state.sourceJobDirection || "");
@@ -186,6 +228,7 @@ async function loadSourceJobs() {
     api(`/api/source-jobs?q=${query}&direction=${direction}&limit=500`),
     api(`/api/source-jobs/summary?q=${query}&direction=${direction}`),
   ]);
+  if (query !== encodeURIComponent(state.sourceJobQuery || "") || direction !== encodeURIComponent(state.sourceJobDirection || "")) return;
   Object.assign(state, { sourceJobs, sourceJobsSummary });
   renderSourceJobs();
 }
@@ -238,23 +281,43 @@ function renderCodexChat() {
   const input = document.querySelector("#codex-chat-input");
   const button = document.querySelector("#codex-send-button");
   if (!badge || !reply || !input || !button) return;
-  if (!runtime.available) {
-    badge.textContent = "Codex 不可用";
-    badge.className = "codex-connection is-offline";
-  } else if (runtime.connected) {
-    badge.textContent = "已连接";
-    badge.className = "codex-connection is-connected";
-  } else {
-    badge.textContent = "可随时启动";
-    badge.className = "codex-connection";
-  }
+  const current = !runtime.available ? "unavailable" : (runtime.state || "idle");
+  const presentations = {
+    idle: ["尚未运行", "发送消息后启动 Codex。"],
+    starting: ["正在启动", "正在连接任务，请稍候。"],
+    running: ["正在运行", "Codex 正在处理任务；发送消息会追加到本轮。"],
+    awaiting_input: ["等待你的确认", "当前任务已停在确认处，回答后才会继续。"],
+    paused: ["已暂停", "当前没有执行任务，可点击「继续」。"],
+    released: ["已移交桌面", "网页已释放会话；桌面未占用时可从这里继续。"],
+    completed: ["本轮已完成", "当前没有执行任务，可以发送新的指令。"],
+    failed: ["运行失败", "查看错误后，可以重新发送指令。"],
+    unavailable: ["Codex 不可用", "请检查本地 Codex 是否已安装。"],
+  };
+  const [title, hint] = presentations[current] || presentations.idle;
+  document.querySelector("#codex-chat").dataset.state = current;
+  document.querySelector("#codex-state-title").textContent = title;
+  document.querySelector("#codex-state-hint").textContent = hint;
+  badge.textContent = runtime.connected ? "Codex 已连接" : (runtime.state === "starting" ? "Codex 正在连接" : "Codex 按需连接");
+  badge.title = runtime.connected ? "当前已连接 Codex 运行进程" : "发送指令或继续任务时建立 Codex 连接；GitHub 更新不需要连接 Codex。";
+  badge.className = `codex-connection${runtime.connected ? " is-connected" : ""}`;
   reply.textContent = runtime.last_agent_message || runtime.message || "你可以从这里下达找岗、筛选、投递和资料整理指令。";
-  const blocked = state.sendingMessage || !runtime.available || runtime.state === "awaiting_input" || runtime.state === "starting";
+  const blocked = state.sendingMessage || state.responding || !runtime.available || runtime.state === "awaiting_input" || runtime.state === "starting";
   input.disabled = blocked;
   button.disabled = blocked;
-  button.textContent = runtime.state === "running" ? "追加指令" : (runtime.state === "starting" ? "正在启动…" : "发送给 Codex");
+  button.textContent = state.sendingMessage ? "正在发送…" : (runtime.state === "running" ? "追加指令" : (runtime.state === "starting" ? "正在启动…" : "发送并启动"));
+  button.classList.toggle("is-steering", runtime.state === "running");
+  document.querySelectorAll("[data-quick-message]").forEach(item => { item.disabled = blocked; });
+  const pending = runtime.pending_request;
+  const canAuthorize = runtime.state === "awaiting_input" && runtime.connected && ["command", "file_change", "permissions"].includes(pending?.kind);
+  const authorize = document.querySelector("#codex-quick-authorize");
+  authorize.disabled = !canAuthorize || state.responding;
+  authorize.dataset.requestId = canAuthorize ? pending.id : "";
+  document.querySelector("#quick-authorization-copy").textContent = canAuthorize
+    ? `仅授权当前请求：${pending.message}（不包含未来请求；详细内容见上方确认区）`
+    : (pending?.kind === "user_input" ? "这次需要你回答问题，请在上方确认区填写，不能用通用授权代替。" : "有明确权限请求时，才可授权本次操作。");
   document.querySelector("#codex-release-button").disabled = !runtime.connected || runtime.state === "starting" || state.releasing;
   document.querySelector("#codex-project-copy").textContent = runtime.project_path ? `会话项目目录：${runtime.project_path}` : "";
+  renderResumeImport();
 }
 
 function renderApproval() {
@@ -278,14 +341,16 @@ function renderApproval() {
       return `<label class="approval-question"><span>${esc(question.question || question.header || "请确认")}</span>${question.description ? `<small>${esc(question.description)}</small>` : ""}${optionHtml}</label>`;
     }).join("") + '<div class="approval-actions"><button class="button approve" type="submit">确认并继续</button></div>';
   } else {
-    form.innerHTML = '<div class="approval-actions"><button class="button decline" type="button" data-decision="decline">拒绝</button><button class="button approve" type="button" data-decision="accept">允许并继续</button></div>';
-    form.querySelectorAll("[data-decision]").forEach((button) => button.addEventListener("click", () => respondToCodex(button.dataset.decision)));
+    const details = pending.kind === "permissions" ? `<pre class="permission-details">${esc(JSON.stringify(pending.params?.permissions || {}, null, 2))}</pre>` : "";
+    form.innerHTML = details + '<div class="approval-actions"><button class="button decline" type="button" data-decision="decline">拒绝</button><button class="button approve" type="button" data-decision="accept">允许并继续</button></div>';
+    form.querySelectorAll("[data-decision]").forEach((button) => button.addEventListener("click", () => respondToCodex(button.dataset.decision, pending.id)));
   }
 }
 
-async function respondToCodex(decision = "") {
+async function respondToCodex(decision = "", expectedId = state.codex?.pending_request?.id) {
   const pending = state.codex?.pending_request;
-  if (!pending) return;
+  if (!pending || state.responding) return;
+  if (String(pending.id) !== String(expectedId)) { toast("确认项已变化，请重新查看后操作"); return; }
   const answers = {};
   if (pending.kind === "user_input") {
     const data = new FormData(document.querySelector("#approval-form"));
@@ -296,9 +361,15 @@ async function respondToCodex(decision = "") {
     }
   }
   try {
+    state.responding = true; renderCodexChat();
+    document.querySelectorAll("#approval-form button").forEach(item => { item.disabled = true; });
     state.codex = await api("/api/codex/respond", { method: "POST", body: JSON.stringify({ request_id: pending.id, answers, decision }) });
-    renderAutomation(); toast("已确认，Codex 继续执行");
+    renderAutomation(); toast(decision === "decline" ? "已拒绝本次请求" : "已确认，Codex 继续执行");
   } catch (error) { toast(error.message); }
+  finally {
+    state.responding = false; renderCodexChat();
+    document.querySelectorAll("#approval-form button").forEach(item => { item.disabled = false; });
+  }
 }
 
 function renderDynamicFields() {
@@ -313,14 +384,40 @@ function renderDynamicFields() {
 
 function renderResumeImport() {
   const current = state.profileImport || {};
-  const path = state.profile.resume_path || current.resume_path || "";
+  const path = current.resume_path || state.profile.resume_path || "";
   document.querySelector("#resume-file-label").textContent = path || "先在下方填写简历绝对路径";
   const target = document.querySelector("#resume-suggestions");
-  if (current.status === "requested") {
-    target.innerHTML = '<div class="callout"><strong>AI 解析请求已发起</strong><span>提取完成后，候选字段会出现在这里供你确认。</span></div>';
-    return;
+  const busy = ["starting", "running", "awaiting_input"].includes(state.codex?.state);
+  const own = state.codex?.resume_request_id && state.codex.resume_request_id === current.request_id;
+  const parseButton = document.querySelector("#parse-resume");
+  parseButton.disabled = busy || state.requestingResume || !state.codex?.available;
+  parseButton.textContent = state.requestingResume ? "正在发起…" : (busy && own ? "解析任务处理中" : (["paused", "failed"].includes(current.status) ? "重新解析简历" : "AI 解析简历"));
+  document.querySelector("#resume-action-hint").textContent = busy && !own ? "Codex 正在处理另一项任务。请等待完成，或先在总览暂停，再解析简历。" : "解析结果只生成建议，确认后才写入资料。";
+  const progress = document.querySelector("#resume-progress");
+  progress.hidden = !current.request_id;
+  progress.dataset.state = current.status || "idle";
+  const names = {requested: "等待接管", starting: "正在启动解析", running: "Codex 正在解析", awaiting_input: "解析等待你的确认", paused: "解析已暂停", failed: "解析未完成", ready_for_review: "解析完成 · 请确认字段", applied: "已写入个人资料"};
+  document.querySelector("#resume-progress-title").textContent = names[current.status] || "尚未解析";
+  document.querySelector("#resume-progress-message").textContent = current.message || "";
+  document.querySelector("#resume-progress-time").textContent = current.updated_at ? `更新于 ${formatTime(current.updated_at)}` : "";
+  document.querySelector("#resume-stream-connection").textContent = state.resumeStreamConnected ? "实时同步" : "正在重连 · 定时刷新兜底";
+  const events = current.progress_events || [];
+  const timeline = document.querySelector("#resume-progress-events");
+  const eventHtml = events.slice(-5).map(item => `<li><time>${esc(formatTime(item.at))}</time><span>${esc(item.message)}</span></li>`).join("");
+  if (timeline.innerHTML !== eventHtml) timeline.innerHTML = eventHtml;
+  const stream = document.querySelector("#resume-stream");
+  const replyText = (current.agent_messages || []).map(item => item.text).join("\n\n") || "尚未收到 Codex 的回复。此处只显示这次简历解析的公开回复。";
+  if (stream.textContent !== replyText) {
+    const follow = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 50;
+    stream.textContent = replyText;
+    if (follow) stream.scrollTop = stream.scrollHeight;
   }
+  document.querySelector("#resume-show-approval").hidden = !(own && current.status === "awaiting_input" && state.codex?.pending_request);
   const suggestions = current.suggestions || [];
+  // Do not rebuild checkboxes on each delta/poll: preserve the user's selections.
+  const signature = JSON.stringify([current.request_id, current.status, suggestions]);
+  if (target.dataset.signature === signature) return;
+  target.dataset.signature = signature;
   if (current.status !== "ready_for_review" || !suggestions.length) {
     target.innerHTML = "";
     return;
@@ -373,7 +470,80 @@ function showView(name) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === name));
   const titles = { overview: "今天继续向前。", jobs: "只看真正属于 27 届的秋招机会。", applications: "每一次申请，都有迹可循。", sites: "登录过的网站，不必重新摸索。", profile: "先把真实信息准备好。" };
   document.querySelector("#page-title").textContent = titles[name] || titles.overview;
+  if (name === "updates") {
+    document.querySelector("#page-title").textContent = "更新功能，保留你的进度。";
+    loadUpdates();
+  }
 }
+
+function renderUpdates() {
+  const update = state.updates || {};
+  const labels = {idle: "尚未检查", checking: "正在检查", available: "有可用更新", up_to_date: "远程已同步", waiting: "等待任务空闲", needs_review: "核实历史任务", installing: "正在安装", restarting: "正在重启", installed: "更新已安装", conflict: "本地修改冲突", failed: "更新未完成"};
+  document.querySelector("#update-panel").dataset.state = update.state || "idle";
+  document.querySelector("#update-state").textContent = labels[update.state] || "尚未检查";
+  document.querySelector("#update-current-version").textContent = update.current_version || "—";
+  document.querySelector("#update-base-commit").textContent = update.installed_commit?.slice(0, 8) || "—";
+  document.querySelector("#update-latest-commit").textContent = update.latest_commit?.slice(0, 8) || "—";
+  document.querySelector("#update-check-time").textContent = formatTime(update.checked_at);
+  document.querySelector("#update-message").textContent = update.message || "尚未检查远程更新";
+  document.querySelector("#update-release-note").textContent = update.release_note || "";
+  document.querySelector("#update-backup").textContent = update.backup_path ? `最近源文件备份：${update.backup_path}` : "";
+  const busy = state.updating || ["checking", "installing", "restarting"].includes(update.state);
+  document.querySelector("#check-updates").disabled = busy;
+  document.querySelector("#install-update").disabled = busy || !update.available || Boolean(update.task_guard?.blocked);
+  document.querySelector("#auto-update").disabled = state.updating || update.state === "installing";
+  if (!state.updating) document.querySelector("#auto-update").checked = Boolean(update.auto_update);
+  const guard = update.task_guard || {};
+  const target = document.querySelector("#update-task-guard");
+  const entries = [...(guard.blockers || []), ...(guard.stale_web || [])];
+  const markup = entries.map(item => `<div class="update-task" data-kind="${esc(item.kind)}"><div><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small>${item.updated_at ? `<small>最后记录：${esc(formatTime(item.updated_at))} · ${item.kind === "unverified_activity" ? "尚未核实存活状态" : "遗留网页记录"}</small>` : ""}</div>${item.clearable ? `<button class="button ghost" type="button" data-reconcile-run="${esc(item.run_id)}" ${busy ? "disabled" : ""}>${item.kind === "unverified_activity" ? "确认原任务已停止" : "整理遗留状态"}</button>` : '<button class="button ghost" type="button" data-update-overview>查看当前任务</button>'}</div>`).join("");
+  if (target.innerHTML !== markup) target.innerHTML = markup;
+  target.hidden = !entries.length;
+}
+
+async function loadUpdates() {
+  if (state.loadingUpdates || state.updating) return;
+  state.loadingUpdates = true;
+  const revision = state.updateRevision || 0;
+  try {
+    const previous = state.updates?.state;
+    const update = await api("/api/updates");
+    if (revision !== (state.updateRevision || 0)) return;
+    state.updates = update;
+    if (["restarting", "installing"].includes(previous) && state.updates.state === "installed") {
+      location.reload(); return;
+    }
+    renderUpdates();
+  } catch (error) {
+    document.querySelector("#update-message").textContent = state.updates?.state === "restarting" ? "后台正在重启，页面会自动重连…" : `暂时无法读取更新状态：${error.message}`;
+  } finally { state.loadingUpdates = false; }
+}
+
+async function updateAction(action, body = {}) {
+  if (state.updating) return;
+  state.updateRevision = (state.updateRevision || 0) + 1;
+  state.updating = true; renderUpdates();
+  try {
+    state.updates = await api(`/api/updates/${action}`, {method: "POST", headers: {"X-Job-Autopilot": "dashboard"}, body: JSON.stringify(body)});
+    if (action === "settings") toast(state.updates.auto_update ? "已开启空闲时自动更新" : "自动更新已关闭");
+    if (action === "reconcile") { toast(`已整理 ${state.updates.reconciled || 0} 条活动记录；投递进度保留`); await loadData(); }
+  } catch (error) { toast(error.message); }
+  finally { state.updating = false; state.updateRevision += 1; renderUpdates(); }
+}
+document.querySelector("#check-updates").addEventListener("click", () => updateAction("check"));
+document.querySelector("#install-update").addEventListener("click", () => updateAction("install"));
+document.querySelector("#auto-update").addEventListener("change", event => updateAction("settings", {auto_update: event.target.checked}));
+document.querySelector("#update-task-guard").addEventListener("click", event => {
+  if (event.target.closest("[data-update-overview]")) { showView("overview"); return; }
+  const button = event.target.closest("[data-reconcile-run]");
+  if (!button || state.updating) return;
+  const guard = state.updates?.task_guard || {};
+  const item = [...(guard.blockers || []), ...(guard.stale_web || [])].find(item => item.run_id === button.dataset.reconcileRun);
+  if (!item) return;
+  const external = item.kind === "unverified_activity";
+  if (external && !window.confirm(`请先确认「${item.label}」已在原对话中停止。\n此操作只把本地活动记录改为暂停，不会中断任务，也不会删除投递记录。\n确认原任务已停止并整理状态？`)) return;
+  updateAction("reconcile", {entries: [{run_id: item.run_id, revision: item.revision}], confirmed: external});
+});
 
 document.querySelectorAll(".nav-item").forEach((item) => item.addEventListener("click", () => showView(item.dataset.view)));
 document.querySelectorAll("[data-target-view]").forEach((item) => item.addEventListener("click", () => showView(item.dataset.targetView)));
@@ -461,18 +631,19 @@ document.querySelector("#run-form").addEventListener("submit", async (event) => 
 });
 
 document.querySelector("#parse-resume").addEventListener("click", async () => {
+  if (state.requestingResume) return;
   const path = document.querySelector('input[name="resume_path"]').value.trim();
   if (!path) { toast("请先填写简历绝对路径"); return; }
   try {
-    state.profile.resume_path = path;
-    await api("/api/profile", { method: "PUT", body: JSON.stringify({ resume_path: path }) });
+    state.requestingResume = true; renderResumeImport();
     const result = await api("/api/profile/resume-request", { method: "POST", body: JSON.stringify({ resume_path: path }) });
     state.profileImport = result.profile_import;
     state.automation = result.automation;
     state.codex = result.codex;
-    renderProfile(); renderAutomation();
-    toast("Codex 正在解析简历");
+    renderResumeImport(); renderAutomation();
+    toast("简历解析请求已接受，可在下方查看实时进展");
   } catch (error) { toast(error.message); }
+  finally { state.requestingResume = false; renderResumeImport(); }
 });
 
 async function applyResumeSuggestions() {
@@ -525,7 +696,11 @@ document.querySelector("#approval-form").addEventListener("submit", async (event
 document.querySelector("#codex-chat-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = document.querySelector("#codex-chat-input");
-  const message = input.value.trim();
+  await sendCodexMessage(input.value.trim(), true);
+});
+
+async function sendCodexMessage(message, clearDraft = false) {
+  const input = document.querySelector("#codex-chat-input");
   if (!message || state.sendingMessage) return;
   const steering = state.codex.state === "running";
   state.sendingMessage = true;
@@ -535,11 +710,23 @@ document.querySelector("#codex-chat-form").addEventListener("submit", async (eve
       method: "POST",
       body: JSON.stringify({ message }),
     });
-    input.value = "";
+    if (clearDraft && input.value.trim() === message) input.value = "";
     renderAutomation();
     toast(steering ? "补充指令已发送" : "消息已发送给 Codex");
   } catch (error) { toast(error.message); }
   finally { state.sendingMessage = false; renderCodexChat(); }
+}
+
+document.querySelectorAll("[data-quick-message]").forEach(button => {
+  button.addEventListener("click", () => sendCodexMessage(button.dataset.quickMessage));
+});
+document.querySelector("#codex-quick-authorize").addEventListener("click", event => {
+  respondToCodex("accept", event.currentTarget.dataset.requestId);
+});
+document.querySelector("#resume-show-approval").addEventListener("click", () => {
+  document.querySelector('[data-view="overview"]').click();
+  document.querySelector("#codex-approval").scrollIntoView({behavior: "smooth", block: "center"});
+  document.querySelector("#approval-form input, #approval-form button")?.focus({preventScroll: true});
 });
 
 document.querySelector("#codex-release-button").addEventListener("click", async () => {
@@ -623,15 +810,37 @@ document.querySelector("#detail-form").addEventListener("submit", async event =>
   } catch (error) { document.querySelector("#detail-message").textContent = error.message; }
 });
 const initialView = new URLSearchParams(window.location.search).get("view");
-if (["overview", "jobs", "applications", "sites", "profile"].includes(initialView)) showView(initialView);
+if (["overview", "jobs", "applications", "sites", "profile", "updates"].includes(initialView)) showView(initialView);
 loadData();
+loadUpdates();
+loadLibrarySync();
+setInterval(loadLibrarySync, 2500);
+setInterval(loadUpdates, 2500);
+// SSE carries actual agent deltas and request state; polling recovers if streaming is unavailable.
+if (typeof EventSource !== "undefined") {
+  const resumeEvents = new EventSource("/api/profile/import/events");
+  resumeEvents.addEventListener("profile", event => {
+    try {
+      state.profileImport = JSON.parse(event.data);
+      state.resumeStreamConnected = true;
+      renderResumeImport();
+    } catch (_) { state.resumeStreamConnected = false; }
+  });
+  resumeEvents.onopen = () => { state.resumeStreamConnected = true; renderResumeImport(); };
+  resumeEvents.onerror = () => { state.resumeStreamConnected = false; renderResumeImport(); };
+  window.addEventListener("pagehide", () => resumeEvents.close());
+}
 setInterval(async () => {
+  if (state.polling) return;
+  state.polling = true;
+  try {
   if (!document.querySelector("#connection-error").hidden) { await loadData(); return; }
   try {
     const [codex, automation, activity, applications] = await Promise.all([api("/api/codex"), api("/api/automation"), api("/api/activity"), api("/api/applications")]);
     state.codex = codex;
     state.automation = automation;
     state.activity = activity;
+    if (!state.resumeStreamConnected) state.profileImport = await api("/api/profile/import");
     const applicationsChanged = JSON.stringify(state.applications) !== JSON.stringify(applications);
     state.applications = applications;
     state.applicationsDirty ||= applicationsChanged;
@@ -640,4 +849,5 @@ setInterval(async () => {
     }
     renderOverview(); renderAutomation();
   } catch (_) { document.querySelector("#connection-error").hidden = false; }
+  } finally { state.polling = false; }
 }, 1800);

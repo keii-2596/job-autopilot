@@ -186,6 +186,8 @@ class CodexRunController:
         self.client = client or CodexAppServerClient(self._handle_message)
         self.client.on_message = self._handle_message
         self._run_lock = threading.Lock()
+        self._submission_lock = threading.RLock()
+        self._resume_request_id = ""
         self._release_thread: threading.Thread | None = None
         current = self.ledger.codex_runtime()
         if current.get("state") in self.ACTIVE_STATES:
@@ -194,6 +196,13 @@ class CodexRunController:
                 turn_id="",
                 pending_request=None,
                 message="后台服务已重启，可以继续上次任务",
+            )
+        pending_import = self.ledger.profile_import()
+        if (pending_import.get("source", "web_app_server") == "web_app_server"
+                and pending_import.get("status") in {"requested", "starting", "running", "awaiting_input"}):
+            self.ledger.update_profile_import_progress(
+                str(pending_import.get("request_id") or ""), status="paused",
+                message="后台已重启或原解析任务已中断，请点击重新解析。",
             )
 
     def status(self) -> dict[str, Any]:
@@ -237,17 +246,45 @@ class CodexRunController:
         return "$job-autopilot\n" + prompt
 
     def start_run(self, automation: dict[str, Any]) -> dict[str, Any]:
+        with self._submission_lock:
+            return self._start_run(automation)
+
+    def _assert_can_start(self) -> None:
+        current = self.ledger.codex_runtime()
+        if current.get("state") in self.ACTIVE_STATES:
+            raise RuntimeError("Codex 正在处理其他请求，请等待完成或先暂停；当前任务未被更改。")
         if not shutil.which("codex"):
             raise RuntimeError("未找到 Codex CLI，无法从网页启动任务")
-        current = self.ledger.codex_runtime()
-        if current.get("state") in self.ACTIVE_STATES and self.client.running:
-            raise RuntimeError("已有 Job Autopilot 任务正在运行")
+
+    def request_run(self, action: str, criteria: dict[str, Any]) -> dict[str, Any]:
+        with self._submission_lock:
+            self._assert_can_start()
+            automation = self.ledger.request_automation(action, criteria, source="web_app_server")
+            return {"automation": automation, "codex": self._start_run(automation)}
+
+    def request_resume(self, resume_path: str) -> dict[str, Any]:
+        with self._submission_lock:
+            self._assert_can_start()
+            self.ledger.request_profile_import(resume_path, source="web_app_server")
+            automation = self.ledger.automation()
+            runtime = self._start_run(automation)
+            return {"profile_import": self.ledger.profile_import(), "automation": automation, "codex": runtime}
+
+    def _start_run(self, automation: dict[str, Any]) -> dict[str, Any]:
+        self._assert_can_start()
+        self._resume_request_id = ""
+        if automation.get("action") == "parse_resume":
+            pending = self.ledger.profile_import()
+            if pending.get("automation_request_id") == automation.get("request_id"):
+                self._resume_request_id = str(pending.get("request_id") or "")
+        self._resume_progress("starting", "正在启动 Codex 简历解析")
         self.ledger.set_codex_runtime(
             state="starting",
             turn_id="",
             message="正在启动 Codex 后台任务",
             last_agent_message="",
             pending_request=None,
+            resume_request_id=self._resume_request_id,
         )
         self._activity_update(
             automation,
@@ -259,6 +296,10 @@ class CodexRunController:
         return self.status()
 
     def send_message(self, message: str) -> dict[str, Any]:
+        with self._submission_lock:
+            return self._send_message(message)
+
+    def _send_message(self, message: str) -> dict[str, Any]:
         """Send a free-form dashboard message to the durable Codex thread."""
         prompt = message.strip()
         if not prompt:
@@ -292,12 +333,14 @@ class CodexRunController:
         if state == "running":
             raise RuntimeError("Codex 后台连接已关闭，请稍后重新发送")
 
+        self._resume_request_id = ""
         self.ledger.set_codex_runtime(
             state="starting",
             turn_id="",
             message="正在发送给 Codex",
             last_agent_message="",
             pending_request=None,
+            resume_request_id="",
         )
         threading.Thread(target=self._begin_message, args=(prompt,), daemon=True).start()
         return self.status()
@@ -424,6 +467,7 @@ class CodexRunController:
             turn_id = str((started or {}).get("turn", {}).get("id") or "")
             if self.ledger.codex_runtime().get("state") == "starting":
                 self.ledger.set_codex_runtime(state="running", turn_id=turn_id, message="Codex 正在执行")
+                self._resume_progress("running", "Codex 已接管，正在读取并理解简历")
             if self.ledger.codex_runtime().get("state") == "running":
                 self._activity_update(
                     automation, state="running", stage="preparing", message="Codex 已开始执行"
@@ -432,6 +476,7 @@ class CodexRunController:
             message = f"Codex 启动失败：{error}"
             self.ledger.set_codex_runtime(state="failed", message=message, pending_request=None)
             self.ledger.set_automation_state("failed", message)
+            self._resume_progress("failed", message)
             self.client.close()
         finally:
             self._run_lock.release()
@@ -440,6 +485,11 @@ class CodexRunController:
         request_id = str(automation.get("request_id") or "")
         activity_run_id = str(automation.get("activity_run_id") or "")
         action = str(automation.get("action") or "process_queue")
+        resume_instruction = (
+            "本轮只解析简历，不执行找岗或投递。使用 resume-extract 提取文本，理解后通过 "
+            "resume-import-complete 保存候选字段，不直接写入个人资料。请用简短的可见回复"
+            "说明正在读取、理解和生成建议的进展；不要在进度回复里复述完整简历或敏感编号。"
+        ) if action == "parse_resume" else ""
         return (
             "$job-autopilot:job-autopilot\n"
             f"接管 Job Autopilot 网页刚刚发起的任务。request_id={request_id}，"
@@ -447,6 +497,7 @@ class CodexRunController:
             "用户已明确要求从网页启动本轮工作。先读取 run-state 并确认 request_id 一致，再按技能流程认领和执行。"
             "不要修改 Job Autopilot 插件源码。需要个人事实、验证码、敏感信息传输或最终提交确认时，"
             "使用 request_user_input 等待用户回答；完成或失败后务必更新本地 run-state。"
+            + resume_instruction
         )
 
     def pause(self) -> dict[str, Any]:
@@ -465,6 +516,7 @@ class CodexRunController:
         self.ledger.set_codex_runtime(
             state="paused", turn_id="", pending_request=None, message="已由用户暂停"
         )
+        self._resume_progress("paused", "解析已暂停，已收到的回复保留；可重新解析。")
         self._activity_update(
             self.ledger.automation(),
             state="paused",
@@ -529,6 +581,7 @@ class CodexRunController:
         self.ledger.set_codex_runtime(
             state="running", pending_request=None, message="已收到确认，Codex 继续执行"
         )
+        self._resume_progress("running", "已收到确认，Codex 继续解析")
         self._activity_update(
             self.ledger.automation(),
             state="running",
@@ -539,6 +592,11 @@ class CodexRunController:
     def _handle_message(self, message: dict[str, Any]) -> None:
         method = str(message.get("method") or "")
         params = message.get("params") if isinstance(message.get("params"), dict) else {}
+        current = self.ledger.codex_runtime()
+        if params.get("threadId") and current.get("thread_id") and params["threadId"] != current["thread_id"]:
+            return
+        if params.get("turnId") and current.get("turn_id") and params["turnId"] != current["turn_id"]:
+            return
         if message.get("id") is not None and method:
             pending = self._normalize_server_request(message.get("id"), method, params)
             self.ledger.set_codex_runtime(
@@ -546,6 +604,7 @@ class CodexRunController:
                 message=pending["message"],
                 pending_request=pending,
             )
+            self._resume_progress("awaiting_input", pending["message"])
             self._activity_update(
                 self.ledger.automation(),
                 state="waiting",
@@ -558,6 +617,7 @@ class CodexRunController:
             self.ledger.set_codex_runtime(
                 state="running", turn_id=str(turn.get("id") or ""), message="Codex 正在执行"
             )
+            self._resume_progress("running", "Codex 已接管，正在读取并理解简历")
             self._activity_update(
                 self.ledger.automation(),
                 state="running",
@@ -570,21 +630,29 @@ class CodexRunController:
                 current = self.ledger.codex_runtime()
                 combined = (str(current.get("last_agent_message") or "") + delta)[-6000:]
                 self.ledger.set_codex_runtime(last_agent_message=combined, message="Codex 正在处理")
+                self.ledger.update_profile_import_progress(
+                    self._resume_request_id, item_id=str(params.get("itemId") or ""), delta=delta
+                )
         elif method == "item/completed":
             item = params.get("item") if isinstance(params.get("item"), dict) else {}
             if item.get("type") == "agentMessage" and item.get("text"):
                 self.ledger.set_codex_runtime(last_agent_message=str(item["text"])[-6000:])
+                self.ledger.update_profile_import_progress(
+                    self._resume_request_id, item_id=str(item.get("id") or ""), text=str(item["text"])
+                )
         elif method == "turn/completed":
             turn = params.get("turn") if isinstance(params.get("turn"), dict) else {}
             status = str(turn.get("status") or "completed")
             error = turn.get("error") if isinstance(turn.get("error"), dict) else {}
             current = self.ledger.codex_runtime()
             if status == "interrupted":
+                self._resume_progress("paused", "解析已暂停，已收到的回复保留；可重新解析。")
                 self.ledger.set_codex_runtime(
                     state="paused", turn_id="", pending_request=None, message="本轮已暂停，可以继续"
                 )
             elif status == "failed":
                 detail = str(error.get("message") or "Codex 执行失败")
+                self._resume_progress("failed", detail)
                 self.ledger.set_codex_runtime(
                     state="failed", turn_id="", pending_request=None, message=detail
                 )
@@ -598,6 +666,7 @@ class CodexRunController:
                         message=detail,
                     )
             elif current.get("state") != "awaiting_input":
+                self._resume_progress("failed", "本轮已结束，但没有生成可确认的资料字段。请查看回复后重新解析。")
                 message_text = str(current.get("last_agent_message") or "本轮 Codex 任务已结束")
                 self.ledger.set_codex_runtime(
                     state="completed", turn_id="", pending_request=None, message=message_text[:300]
@@ -615,16 +684,22 @@ class CodexRunController:
         elif method in {"error", "bridge/disconnected"}:
             if method == "error" and params.get("willRetry"):
                 self.ledger.set_codex_runtime(message="连接暂时中断，Codex 正在重试")
+                self._resume_progress("running", "连接暂时中断，Codex 正在重试")
                 return
             error = params.get("error") if isinstance(params.get("error"), dict) else {}
             detail = str(error.get("message") or params.get("message") or "Codex 后台连接已关闭")
             current = self.ledger.codex_runtime()
             if current.get("state") in self.ACTIVE_STATES:
+                self._resume_progress("failed", detail)
                 self.ledger.set_codex_runtime(state="failed", message=detail, pending_request=None)
                 self._activity_update(
                     self.ledger.automation(), state="failed", stage="failed", message=detail
                 )
                 self._schedule_release()
+
+    def _resume_progress(self, status: str, message: str) -> None:
+        if self._resume_request_id:
+            self.ledger.update_profile_import_progress(self._resume_request_id, status=status, message=message)
 
     def _activity_update(self, automation: dict[str, Any], **changes: Any) -> None:
         run_id = str(automation.get("activity_run_id") or "")

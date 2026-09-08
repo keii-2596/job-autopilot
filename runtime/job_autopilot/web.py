@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import threading
+import time
+import os
+import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -10,6 +14,9 @@ from urllib.parse import parse_qs, urlsplit
 
 from .codex_bridge import CodexRunController
 from .db import Ledger
+from .updater import GitHubUpdater
+from .job_library_sync import GitHubJobLibrary
+from .update_guard import UpdateTaskGuard
 
 
 STATIC_ROOT = Path(__file__).with_name("web_static")
@@ -55,6 +62,29 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _error(self, error: Exception, status: int = 400) -> None:
         self._json({"success": False, "error": str(error)}, status)
+
+    def _resume_events(self) -> None:
+        """Replay the latest snapshot on reconnect, then stream changed imports."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache, no-store")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        previous = ""
+        deadline = time.monotonic() + 25
+        try:
+            self.wfile.write(b"retry: 1000\n\n")
+            while not self.server.stopping.is_set() and time.monotonic() < deadline:
+                payload = json.dumps(self.ledger.profile_import(), ensure_ascii=False)
+                if payload != previous:
+                    self.wfile.write(f"event: profile\ndata: {payload}\n\n".encode("utf-8"))
+                    previous = payload
+                else:
+                    self.wfile.write(b": heartbeat\n\n")
+                self.wfile.flush()
+                self.server.stopping.wait(0.35)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
 
     def _body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
@@ -120,6 +150,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._json(self.ledger.profile())
             elif path == "/api/profile/import":
                 self._json(self.ledger.profile_import())
+            elif path == "/api/profile/import/events":
+                self._resume_events()
             elif path == "/api/settings":
                 self._json(self.ledger.settings())
             elif path == "/api/policy/check":
@@ -130,6 +162,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._json(self.codex.status())
             elif path == "/api/codex/projects":
                 self._json(self.codex.projects())
+            elif path == "/api/updates":
+                self._json(self.server.updater.status())
+            elif path == "/api/job-library-sync":
+                self._json(self.server.job_library_sync.status())
             elif path == "/api/activity":
                 self._json(self.ledger.activity_snapshot())
             elif path == "/api/source-jobs/summary":
@@ -156,6 +192,35 @@ class DashboardHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         try:
             body = self._body()
+            if path.startswith("/api/updates/") or path.startswith("/api/job-library-sync/"):
+                # Update endpoints cannot be invoked by another website's form/fetch.
+                origin = self.headers.get("Origin")
+                expected = f"http://{self.headers.get('Host')}"
+                authority = urlsplit(expected)
+                if (authority.hostname not in {"localhost", "127.0.0.1", "::1"}
+                        or authority.username or (origin and origin != expected)
+                        or self.headers.get("X-Job-Autopilot") != "dashboard"):
+                    self._error(ValueError("请从本机控制台操作更新"), 403)
+                    return
+                if path == "/api/job-library-sync/settings":
+                    self._json(self.server.job_library_sync.configure(body.get("auto_sync")))
+                elif path == "/api/job-library-sync/start":
+                    self._json(self.server.job_library_sync.request(), 202)
+                elif path == "/api/updates/settings":
+                    self._json(self.server.updater.configure(body.get("auto_update")))
+                elif path == "/api/updates/reconcile":
+                    if self.server.updater.installing:
+                        raise RuntimeError("正在安装更新，请稍后整理任务状态")
+                    result = self.server.update_guard.reconcile(body.get("entries"), confirmed=body.get("confirmed", False))
+                    self._json({**self.server.updater.status(), "reconciled": result["reconciled"]})
+                elif path in {"/api/updates/check", "/api/updates/install"}:
+                    self._json(self.server.updater.request(path.rsplit("/", 1)[1]), 202)
+                else:
+                    self._json({"error": "not found"}, 404)
+                return
+            if self.server.updater.installing:
+                self._error(RuntimeError("正在安装更新，请稍后操作；原有任务记录已保留。"), 409)
+                return
             if path == "/api/applications":
                 self._json(
                     self.ledger.record_application(
@@ -171,14 +236,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     201,
                 )
             elif path == "/api/automation/start":
-                automation = self.ledger.request_automation(
+                result = self.codex.request_run(
                     str(body.get("action") or "process_queue"),
                     body.get("criteria") if isinstance(body.get("criteria"), dict) else {},
-                    source="web_app_server",
                 )
-                self._json(
-                    {"automation": automation, "codex": self.codex.start_run(automation)}, 202
-                )
+                self._json(result, 202)
             elif path == "/api/automation/stop":
                 automation = self.ledger.set_automation_state("paused", "已由用户暂停")
                 self._json({"automation": automation, "codex": self.codex.pause()})
@@ -196,18 +258,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif path == "/api/codex/release":
                 self._json(self.codex.release())
             elif path == "/api/profile/resume-request":
-                profile_import = self.ledger.request_profile_import(
-                    str(body.get("resume_path") or ""), source="web_app_server"
-                )
-                automation = self.ledger.automation()
-                self._json(
-                    {
-                        "profile_import": profile_import,
-                        "automation": automation,
-                        "codex": self.codex.start_run(automation),
-                    },
-                    202,
-                )
+                self._json(self.codex.request_resume(str(body.get("resume_path") or "")), 202)
             elif path == "/api/profile/fields":
                 self._json(self.ledger.upsert_profile_field(body), 201)
             elif path == "/api/profile/import/apply":
@@ -263,10 +314,29 @@ class DashboardHandler(BaseHTTPRequestHandler):
 class DashboardServer(ThreadingHTTPServer):
     def __init__(self, address: tuple[str, int], ledger: Ledger):
         self.ledger = ledger
+        self.stopping = threading.Event()
         self.codex = CodexRunController(ledger)
+        self.restart_source = None
+        self.update_guard = UpdateTaskGuard(ledger, self.codex,
+            syncing=lambda: hasattr(self, "job_library_sync") and self.job_library_sync._lock.locked())
+        self.updater = GitHubUpdater(ledger, Path(__file__).resolve().parents[2], self._update_busy,
+                                     execution_lock=self.codex._submission_lock, guard=self.update_guard.snapshot)
+        self.job_library_sync = GitHubJobLibrary(ledger, installing=lambda: self.updater.installing)
         super().__init__(address, DashboardHandler)
+        self.update_guard.reconcile()
+
+    def _update_busy(self):
+        return self.update_guard.snapshot()["blocked"]
+
+    def request_restart(self, source):
+        self.restart_source = source
+        # shutdown must run outside the serve_forever thread.
+        threading.Thread(target=self.shutdown, daemon=True).start()
 
     def server_close(self) -> None:
+        self.stopping.set()
+        self.updater.close()
+        self.job_library_sync.close()
         if hasattr(self, "codex"):
             self.codex.close()
         super().server_close()
@@ -276,6 +346,9 @@ def serve(ledger: Ledger, host: str = "127.0.0.1", port: int = 8765) -> None:
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("dashboard may only bind to a loopback address")
     server = DashboardServer((host, port), ledger)
+    server.updater.restart = server.request_restart
+    server.updater.start()
+    server.job_library_sync.start()
     print(f"Job Autopilot dashboard: http://{host}:{port}/")
     print(f"Ledger: {ledger.path}")
     try:
@@ -284,3 +357,6 @@ def serve(ledger: Ledger, host: str = "127.0.0.1", port: int = 8765) -> None:
         pass
     finally:
         server.server_close()
+    if server.restart_source:
+        os.environ["PYTHONPATH"] = str(server.restart_source / "runtime")
+        os.execv(sys.executable, [sys.executable, "-m", "job_autopilot", "serve", "--host", host, "--port", str(port)])
