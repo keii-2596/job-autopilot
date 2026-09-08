@@ -63,6 +63,15 @@ class CodexRunControllerTests(unittest.TestCase):
             time.sleep(0.01)
         self.fail(f"Codex runtime never reached {expected}")
 
+    def wait_for_runtime_state(self, expected: str) -> dict:
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            current = self.ledger.codex_runtime()
+            if current["state"] == expected:
+                return current
+            time.sleep(0.01)
+        self.fail(f"Codex runtime never reached {expected}")
+
     @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
     def test_web_run_starts_a_durable_thread_and_turn(self, _which) -> None:
         automation = self.ledger.request_automation(
@@ -82,6 +91,44 @@ class CodexRunControllerTests(unittest.TestCase):
         self.assertTrue(turn_params["sandboxPolicy"]["networkAccess"])
         activity = self.ledger.get_activity(automation["activity_run_id"])
         self.assertEqual(activity["state"], "running")
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_freeform_message_resumes_thread_and_starts_turn(self, _which) -> None:
+        self.ledger.set_codex_runtime(state="completed", thread_id="thread-existing")
+
+        status = self.controller.send_message("只看上海的 Agent 校招岗位")
+
+        self.assertIn(status["state"], {"starting", "running"})
+        current = self.wait_for_runtime_state("running")
+        self.assertEqual(current["thread_id"], "thread-existing")
+        methods = [method for method, _ in self.client.requests]
+        self.assertIn("thread/resume", methods)
+        turn_params = next(params for method, params in self.client.requests if method == "turn/start")
+        self.assertEqual(turn_params["input"][0]["text"], "只看上海的 Agent 校招岗位")
+        self.assertEqual(turn_params["input"][1]["type"], "skill")
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_message_during_active_turn_uses_turn_steer(self, _which) -> None:
+        self.client.running = True
+        self.ledger.set_codex_runtime(
+            state="running", thread_id="thread-1", turn_id="turn-1"
+        )
+
+        self.controller.send_message("再排除测试岗位")
+
+        method, params = self.client.requests[-1]
+        self.assertEqual(method, "turn/steer")
+        self.assertEqual(params["expectedTurnId"], "turn-1")
+        self.assertEqual(params["input"], [{"type": "text", "text": "再排除测试岗位"}])
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_message_waits_for_pending_confirmation(self, _which) -> None:
+        self.ledger.set_codex_runtime(
+            state="awaiting_input", pending_request={"id": "approval-1"}
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "先处理上方确认项"):
+            self.controller.send_message("继续")
 
     def test_user_input_is_answered_but_secret_value_is_not_persisted(self) -> None:
         self.client.running = True

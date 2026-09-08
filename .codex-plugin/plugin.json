@@ -1,6 +1,6 @@
 {
   "name": "job-autopilot",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Maintain a 2027 fall campus job library, automate recruiting sites, and track every application.",
   "author": {
     "name": "Keii"
@@ -30,6 +30,7 @@
       "Bundled public job snapshot",
       "Cross-conversation progress stream",
       "Standalone Codex task runner",
+      "Direct App Server conversation",
       "Embedded MCP Apps UI"
     ],
     "defaultPrompt": [

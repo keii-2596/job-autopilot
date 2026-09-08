@@ -187,6 +187,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         str(body.get("decision") or ""),
                     )
                 )
+            elif path == "/api/codex/message":
+                self._json(self.codex.send_message(str(body.get("message") or "")), 202)
             elif path == "/api/profile/resume-request":
                 profile_import = self.ledger.request_profile_import(
                     str(body.get("resume_path") or ""), source="web_app_server"

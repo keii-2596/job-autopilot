@@ -225,6 +225,31 @@ function renderAutomation() {
   button.disabled = externalRun;
   document.querySelector("#autopilot-button-label").textContent = externalRun ? "由 Codex 对话执行中" : (active ? "暂停 Autopilot" : "启动 Autopilot");
   renderApproval();
+  renderCodexChat();
+}
+
+function renderCodexChat() {
+  const runtime = state.codex || {};
+  const badge = document.querySelector("#codex-connection");
+  const reply = document.querySelector("#codex-reply");
+  const input = document.querySelector("#codex-chat-input");
+  const button = document.querySelector("#codex-send-button");
+  if (!badge || !reply || !input || !button) return;
+  if (!runtime.available) {
+    badge.textContent = "Codex 不可用";
+    badge.className = "codex-connection is-offline";
+  } else if (runtime.connected) {
+    badge.textContent = "已连接";
+    badge.className = "codex-connection is-connected";
+  } else {
+    badge.textContent = "可随时启动";
+    badge.className = "codex-connection";
+  }
+  reply.textContent = runtime.last_agent_message || runtime.message || "你可以从这里下达找岗、筛选、投递和资料整理指令。";
+  const blocked = !runtime.available || runtime.state === "awaiting_input" || runtime.state === "starting";
+  input.disabled = blocked;
+  button.disabled = blocked;
+  button.textContent = runtime.state === "running" ? "追加指令" : (runtime.state === "starting" ? "正在启动…" : "发送给 Codex");
 }
 
 function renderApproval() {
@@ -487,6 +512,22 @@ document.querySelector("#application-form").addEventListener("submit", async (ev
 document.querySelector("#approval-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   await respondToCodex();
+});
+
+document.querySelector("#codex-chat-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#codex-chat-input");
+  const message = input.value.trim();
+  if (!message) return;
+  try {
+    state.codex = await api("/api/codex/message", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
+    input.value = "";
+    renderAutomation();
+    toast(state.codex.state === "running" ? "补充指令已发送" : "消息已发送给 Codex");
+  } catch (error) { toast(error.message); }
 });
 
 document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));

@@ -208,69 +208,144 @@ class CodexRunController:
         threading.Thread(target=self._begin_run, args=(automation,), daemon=True).start()
         return self.status()
 
+    def send_message(self, message: str) -> dict[str, Any]:
+        """Send a free-form dashboard message to the durable Codex thread."""
+        prompt = message.strip()
+        if not prompt:
+            raise ValueError("请输入要发送给 Codex 的内容")
+        if len(prompt) > 8000:
+            raise ValueError("消息过长，请控制在 8000 个字符以内")
+        if not shutil.which("codex"):
+            raise RuntimeError("未找到 Codex CLI，无法发送消息")
+
+        current = self.ledger.codex_runtime()
+        state = str(current.get("state") or "idle")
+        if state == "awaiting_input":
+            raise RuntimeError("Codex 正在等待确认，请先处理上方确认项")
+        if state == "starting":
+            raise RuntimeError("Codex 正在启动，请稍后再发送")
+
+        thread_id = str(current.get("thread_id") or "")
+        turn_id = str(current.get("turn_id") or "")
+        if state == "running" and self.client.running and thread_id and turn_id:
+            self.client.request(
+                "turn/steer",
+                {
+                    "threadId": thread_id,
+                    "input": [{"type": "text", "text": prompt}],
+                    "expectedTurnId": turn_id,
+                },
+                timeout=30,
+            )
+            self.ledger.set_codex_runtime(message="已将补充指令发送给 Codex")
+            return self.status()
+        if state == "running":
+            raise RuntimeError("Codex 后台连接已关闭，请稍后重新发送")
+
+        self.ledger.set_codex_runtime(
+            state="starting",
+            turn_id="",
+            message="正在发送给 Codex",
+            last_agent_message="",
+            pending_request=None,
+        )
+        threading.Thread(target=self._begin_message, args=(prompt,), daemon=True).start()
+        return self.status()
+
+    def _ensure_thread(self) -> str:
+        self.client.start()
+        current = self.ledger.codex_runtime()
+        thread_id = str(current.get("thread_id") or "")
+        if thread_id:
+            try:
+                resumed = self.client.request("thread/resume", {"threadId": thread_id})
+                thread_id = str((resumed or {}).get("thread", {}).get("id") or thread_id)
+            except Exception:
+                thread_id = ""
+        if thread_id:
+            return thread_id
+
+        created = self.client.request(
+            "thread/start",
+            {
+                "cwd": str(self.plugin_root),
+                "sandbox": "workspace-write",
+                "approvalPolicy": "on-request",
+                "approvalsReviewer": "user",
+                "personality": "friendly",
+                "serviceName": "job_autopilot",
+            },
+            timeout=30,
+        )
+        thread_id = str((created or {}).get("thread", {}).get("id") or "")
+        if not thread_id:
+            raise RuntimeError("Codex 没有返回任务 ID")
+        try:
+            self.client.request("thread/name/set", {"threadId": thread_id, "name": "Job Autopilot"})
+        except Exception:
+            pass
+        return thread_id
+
+    def _turn_params(self, thread_id: str, prompt: str) -> dict[str, Any]:
+        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+        if self.skill_path.is_file():
+            inputs.append(
+                {
+                    "type": "skill",
+                    "name": "job-autopilot:job-autopilot",
+                    "path": str(self.skill_path),
+                }
+            )
+        return {
+            "threadId": thread_id,
+            "input": inputs,
+            "cwd": str(self.plugin_root),
+            "approvalPolicy": "on-request",
+            "approvalsReviewer": "user",
+            "sandboxPolicy": {
+                "type": "workspaceWrite",
+                "writableRoots": [str(self.plugin_root), str(state_dir().resolve())],
+                "networkAccess": True,
+            },
+            "summary": "concise",
+            "personality": "friendly",
+        }
+
+    def _begin_message(self, prompt: str) -> None:
+        if not self._run_lock.acquire(blocking=False):
+            self.ledger.set_codex_runtime(state="failed", message="另一个 Codex 请求正在启动")
+            return
+        try:
+            thread_id = self._ensure_thread()
+            started = self.client.request(
+                "turn/start", self._turn_params(thread_id, prompt), timeout=30
+            )
+            turn_id = str((started or {}).get("turn", {}).get("id") or "")
+            self.ledger.set_codex_runtime(
+                state="running",
+                thread_id=thread_id,
+                turn_id=turn_id,
+                message="Codex 正在回复",
+            )
+        except Exception as error:
+            self.ledger.set_codex_runtime(
+                state="failed",
+                turn_id="",
+                pending_request=None,
+                message=f"消息发送失败：{error}",
+            )
+        finally:
+            self._run_lock.release()
+
     def _begin_run(self, automation: dict[str, Any]) -> None:
         if not self._run_lock.acquire(blocking=False):
             return
         try:
-            self.client.start()
-            current = self.ledger.codex_runtime()
-            thread_id = str(current.get("thread_id") or "")
-            if thread_id:
-                try:
-                    resumed = self.client.request("thread/resume", {"threadId": thread_id})
-                    thread_id = str((resumed or {}).get("thread", {}).get("id") or thread_id)
-                except Exception:
-                    thread_id = ""
-            if not thread_id:
-                created = self.client.request(
-                    "thread/start",
-                    {
-                        "cwd": str(self.plugin_root),
-                        "sandbox": "workspace-write",
-                        "approvalPolicy": "on-request",
-                        "approvalsReviewer": "user",
-                        "personality": "friendly",
-                        "serviceName": "job_autopilot",
-                    },
-                    timeout=30,
-                )
-                thread_id = str((created or {}).get("thread", {}).get("id") or "")
-                if not thread_id:
-                    raise RuntimeError("Codex 没有返回任务 ID")
-                try:
-                    self.client.request(
-                        "thread/name/set",
-                        {"threadId": thread_id, "name": "Job Autopilot"},
-                    )
-                except Exception:
-                    pass
-
+            thread_id = self._ensure_thread()
             prompt = self._prompt_for(automation)
-            inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
-            if self.skill_path.is_file():
-                inputs.append(
-                    {
-                        "type": "skill",
-                        "name": "job-autopilot:job-autopilot",
-                        "path": str(self.skill_path),
-                    }
-                )
             started = self.client.request(
                 "turn/start",
-                {
-                    "threadId": thread_id,
-                    "input": inputs,
-                    "cwd": str(self.plugin_root),
-                    "approvalPolicy": "on-request",
-                    "approvalsReviewer": "user",
-                    "sandboxPolicy": {
-                        "type": "workspaceWrite",
-                        "writableRoots": [str(self.plugin_root), str(state_dir().resolve())],
-                        "networkAccess": True,
-                    },
-                    "summary": "concise",
-                    "personality": "friendly",
-                },
+                self._turn_params(thread_id, prompt),
                 timeout=30,
             )
             turn_id = str((started or {}).get("turn", {}).get("id") or "")

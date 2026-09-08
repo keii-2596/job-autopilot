@@ -36,6 +36,17 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("/api/activity", dashboard)
         self.assertIn("renderActivity", dashboard)
 
+    def test_dashboard_exposes_freeform_codex_conversation(self) -> None:
+        page = (ASSET_ROOT / "index.html").read_text(encoding="utf-8")
+        dashboard = (ASSET_ROOT / "app.js").read_text(encoding="utf-8")
+        backend = (Path(__file__).parents[1] / "runtime" / "job_autopilot" / "web.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('id="codex-chat-form"', page)
+        self.assertIn('id="codex-chat-input"', page)
+        self.assertIn('/api/codex/message', dashboard)
+        self.assertIn('/api/codex/message', backend)
+
     def test_dashboard_defaults_to_technical_jobs_without_sync_controls(self) -> None:
         dashboard = (ASSET_ROOT / "app.js").read_text(encoding="utf-8")
         page = (ASSET_ROOT / "index.html").read_text(encoding="utf-8")

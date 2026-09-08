@@ -56,6 +56,18 @@
           </div>
           <form id="approval-form" class="approval-form"></form>
         </article>
+        <article class="codex-chat panel">
+          <div class="codex-chat-heading">
+            <div><p class="eyebrow">CODEX CONVERSATION</p><h2>直接和 Codex 对话</h2></div>
+            <span class="codex-connection" id="codex-connection">正在连接</span>
+          </div>
+          <div class="codex-reply" id="codex-reply" aria-live="polite">你可以从这里下达找岗、筛选、投递和资料整理指令。</div>
+          <form class="codex-chat-form" id="codex-chat-form">
+            <textarea id="codex-chat-input" rows="2" maxlength="8000" placeholder="例如：只看上海和杭州的 Agent / 后端校招岗位，并把合适的加入待投递"></textarea>
+            <button class="button primary" id="codex-send-button" type="submit">发送给 Codex</button>
+          </form>
+          <small class="codex-chat-note">消息会进入同一个 Job Autopilot 任务；运行中发送会成为补充指令。敏感信息和最终提交仍会单独向你确认。</small>
+        </article>
         <div class="hero-grid">
           <article class="hero-card">
             <div>
