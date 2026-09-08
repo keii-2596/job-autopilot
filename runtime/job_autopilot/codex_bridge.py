@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import threading
@@ -35,6 +36,7 @@ class CodexAppServerClient:
         self._lock = threading.RLock()
         self._write_lock = threading.Lock()
         self._stopping = False
+        self._readers: list[threading.Thread] = []
 
     @property
     def running(self) -> bool:
@@ -53,8 +55,12 @@ class CodexAppServerClient:
                 text=True,
                 bufsize=1,
             )
-            threading.Thread(target=self._read_stdout, daemon=True).start()
-            threading.Thread(target=self._drain_stderr, daemon=True).start()
+            self._readers = [
+                threading.Thread(target=self._read_stdout, daemon=True),
+                threading.Thread(target=self._drain_stderr, daemon=True),
+            ]
+            for reader in self._readers:
+                reader.start()
         self.request(
             "initialize",
             {
@@ -123,7 +129,8 @@ class CodexAppServerClient:
                     pending.ready.set()
                 continue
             self.on_message(message)
-        self._connection_closed()
+        if self.process is process:
+            self._connection_closed()
 
     def _drain_stderr(self) -> None:
         process = self.process
@@ -152,6 +159,14 @@ class CodexAppServerClient:
             process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             process.kill()
+            process.wait(timeout=3)
+        for reader in self._readers:
+            if reader is not threading.current_thread():
+                reader.join(timeout=3)
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream:
+                stream.close()
+        self.process = None
 
 
 class CodexRunController:
@@ -171,6 +186,7 @@ class CodexRunController:
         self.client = client or CodexAppServerClient(self._handle_message)
         self.client.on_message = self._handle_message
         self._run_lock = threading.Lock()
+        self._release_thread: threading.Thread | None = None
         current = self.ledger.codex_runtime()
         if current.get("state") in self.ACTIVE_STATES:
             self.ledger.set_codex_runtime(
@@ -184,7 +200,41 @@ class CodexRunController:
         current = self.ledger.codex_runtime()
         current["available"] = shutil.which("codex") is not None
         current["connected"] = self.client.running
+        current["project_path"] = str(self.project_path())
         return current
+
+    def project_path(self) -> Path:
+        configured = str(self.ledger.settings().get("codex_project_path") or "")
+        return Path(configured).resolve() if configured else state_dir().resolve() / "workspace"
+
+    @staticmethod
+    def _project_list(client: CodexAppServerClient) -> list[dict[str, Any]]:
+        projects = []
+        cursor = None
+        while True:
+            params: dict[str, Any] = {"limit": 100}
+            if cursor:
+                params["cursor"] = cursor
+            result = client.request("project/list", params)
+            projects.extend(result.get("data") or [])
+            cursor = result.get("nextCursor")
+            if not cursor:
+                return projects
+
+    def projects(self) -> list[dict[str, Any]]:
+        client = CodexAppServerClient(lambda message: None)
+        try:
+            client.start()
+            return [{"id": p["id"], "name": p["name"], "roots": p.get("roots", [])}
+                    for p in self._project_list(client)]
+        finally:
+            client.close()
+
+    @staticmethod
+    def _skill_prompt(prompt: str) -> str:
+        if re.search(r"\$job-autopilot(?::job-autopilot)?(?![\w:-])", prompt):
+            return prompt
+        return "$job-autopilot\n" + prompt
 
     def start_run(self, automation: dict[str, Any]) -> dict[str, Any]:
         if not shutil.which("codex"):
@@ -232,7 +282,7 @@ class CodexRunController:
                 "turn/steer",
                 {
                     "threadId": thread_id,
-                    "input": [{"type": "text", "text": prompt}],
+                    "input": [{"type": "text", "text": self._skill_prompt(prompt)}],
                     "expectedTurnId": turn_id,
                 },
                 timeout=30,
@@ -253,27 +303,43 @@ class CodexRunController:
         return self.status()
 
     def _ensure_thread(self) -> str:
+        workdir = self.project_path()
+        workdir.mkdir(parents=True, exist_ok=True)
         self.client.start()
+        project_id = ""
+        if self.ledger.settings().get("codex_project_path"):
+            for project in self._project_list(self.client):
+                if any(Path(root["path"]).resolve() == workdir for root in project.get("roots", [])):
+                    project_id = str(project["id"])
+                    break
+            if not project_id:
+                raise ValueError("这个目录尚未添加为 Codex 项目，请在网页选择已有项目")
         current = self.ledger.codex_runtime()
         thread_id = str(current.get("thread_id") or "")
         if thread_id:
-            try:
-                resumed = self.client.request("thread/resume", {"threadId": thread_id})
-                thread_id = str((resumed or {}).get("thread", {}).get("id") or thread_id)
-            except Exception:
-                thread_id = ""
+            resumed = self.client.request(
+                "thread/resume", {
+                    "threadId": thread_id, "cwd": str(workdir),
+                    "developerInstructions": self._workspace_instructions(),
+                }
+            )
+            thread_id = str((resumed or {}).get("thread", {}).get("id") or thread_id)
+            if project_id:
+                self.client.request("thread/metadata/update", {"threadId": thread_id, "projectId": project_id})
         if thread_id:
             return thread_id
 
         created = self.client.request(
             "thread/start",
             {
-                "cwd": str(self.plugin_root),
+                "cwd": str(workdir),
+                "projectId": project_id or None,
                 "sandbox": "workspace-write",
                 "approvalPolicy": "on-request",
                 "approvalsReviewer": "user",
                 "personality": "friendly",
                 "serviceName": "job_autopilot",
+                "developerInstructions": self._workspace_instructions(),
             },
             timeout=30,
         )
@@ -286,8 +352,16 @@ class CodexRunController:
             pass
         return thread_id
 
+    def _workspace_instructions(self) -> str:
+        return (
+            f"本会话由 Job Autopilot 网页发起，工作目录是用户选择的项目。"
+            f"插件命令使用绝对路径 {self.plugin_root / 'scripts' / 'job-autopilot'}，"
+            "不要假定当前目录包含 scripts。只有本条消息携带 request_id 时才核对该编号；"
+            "普通自然语言指令按本轮需求执行，不要套用历史消息的 request_id。"
+        )
+
     def _turn_params(self, thread_id: str, prompt: str) -> dict[str, Any]:
-        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+        inputs: list[dict[str, Any]] = [{"type": "text", "text": self._skill_prompt(prompt)}]
         if self.skill_path.is_file():
             inputs.append(
                 {
@@ -299,12 +373,12 @@ class CodexRunController:
         return {
             "threadId": thread_id,
             "input": inputs,
-            "cwd": str(self.plugin_root),
+            "cwd": str(self.project_path()),
             "approvalPolicy": "on-request",
             "approvalsReviewer": "user",
             "sandboxPolicy": {
                 "type": "workspaceWrite",
-                "writableRoots": [str(self.plugin_root), str(state_dir().resolve())],
+                "writableRoots": [str(self.project_path()), str(state_dir().resolve())],
                 "networkAccess": True,
             },
             "summary": "concise",
@@ -317,16 +391,13 @@ class CodexRunController:
             return
         try:
             thread_id = self._ensure_thread()
+            self.ledger.set_codex_runtime(thread_id=thread_id)
             started = self.client.request(
                 "turn/start", self._turn_params(thread_id, prompt), timeout=30
             )
             turn_id = str((started or {}).get("turn", {}).get("id") or "")
-            self.ledger.set_codex_runtime(
-                state="running",
-                thread_id=thread_id,
-                turn_id=turn_id,
-                message="Codex 正在回复",
-            )
+            if self.ledger.codex_runtime().get("state") == "starting":
+                self.ledger.set_codex_runtime(state="running", turn_id=turn_id, message="Codex 正在回复")
         except Exception as error:
             self.ledger.set_codex_runtime(
                 state="failed",
@@ -334,6 +405,7 @@ class CodexRunController:
                 pending_request=None,
                 message=f"消息发送失败：{error}",
             )
+            self.client.close()
         finally:
             self._run_lock.release()
 
@@ -342,6 +414,7 @@ class CodexRunController:
             return
         try:
             thread_id = self._ensure_thread()
+            self.ledger.set_codex_runtime(thread_id=thread_id)
             prompt = self._prompt_for(automation)
             started = self.client.request(
                 "turn/start",
@@ -349,19 +422,17 @@ class CodexRunController:
                 timeout=30,
             )
             turn_id = str((started or {}).get("turn", {}).get("id") or "")
-            self.ledger.set_codex_runtime(
-                state="running",
-                thread_id=thread_id,
-                turn_id=turn_id,
-                message="Codex 正在执行",
-            )
-            self._activity_update(
-                automation, state="running", stage="preparing", message="Codex 已开始执行"
-            )
+            if self.ledger.codex_runtime().get("state") == "starting":
+                self.ledger.set_codex_runtime(state="running", turn_id=turn_id, message="Codex 正在执行")
+            if self.ledger.codex_runtime().get("state") == "running":
+                self._activity_update(
+                    automation, state="running", stage="preparing", message="Codex 已开始执行"
+                )
         except Exception as error:
             message = f"Codex 启动失败：{error}"
             self.ledger.set_codex_runtime(state="failed", message=message, pending_request=None)
             self.ledger.set_automation_state("failed", message)
+            self.client.close()
         finally:
             self._run_lock.release()
 
@@ -401,6 +472,29 @@ class CodexRunController:
             message="任务已由用户暂停",
         )
         return self.status()
+
+    def release(self) -> dict[str, Any]:
+        """Release the dedicated App Server process so desktop can resume this thread."""
+        with self._run_lock:
+            current = self.ledger.codex_runtime()
+            if self.client.running and current.get("turn_id"):
+                self.pause()
+            self.client.close()
+            self.ledger.set_codex_runtime(
+                state="released", turn_id="", pending_request=None,
+                message="网页已释放会话，请在桌面任务中点击重试；也可稍后从网页继续。",
+            )
+        return self.status()
+
+    def _release_when_idle(self) -> None:
+        with self._run_lock:
+            if self.ledger.codex_runtime().get("state") in {"completed", "paused", "failed"}:
+                self.client.close()
+
+    def _schedule_release(self) -> None:
+        # Never wait for the reader process from inside its event callback.
+        self._release_thread = threading.Thread(target=self._release_when_idle, daemon=True)
+        self._release_thread.start()
 
     def answer(self, request_id: str, answers: dict[str, Any], decision: str = "") -> dict[str, Any]:
         current = self.ledger.codex_runtime()
@@ -485,7 +579,11 @@ class CodexRunController:
             status = str(turn.get("status") or "completed")
             error = turn.get("error") if isinstance(turn.get("error"), dict) else {}
             current = self.ledger.codex_runtime()
-            if status == "failed":
+            if status == "interrupted":
+                self.ledger.set_codex_runtime(
+                    state="paused", turn_id="", pending_request=None, message="本轮已暂停，可以继续"
+                )
+            elif status == "failed":
                 detail = str(error.get("message") or "Codex 执行失败")
                 self.ledger.set_codex_runtime(
                     state="failed", turn_id="", pending_request=None, message=detail
@@ -513,7 +611,11 @@ class CodexRunController:
                         stage="completed",
                         message="本轮 Codex 任务已结束",
                     )
+            self._schedule_release()
         elif method in {"error", "bridge/disconnected"}:
+            if method == "error" and params.get("willRetry"):
+                self.ledger.set_codex_runtime(message="连接暂时中断，Codex 正在重试")
+                return
             error = params.get("error") if isinstance(params.get("error"), dict) else {}
             detail = str(error.get("message") or params.get("message") or "Codex 后台连接已关闭")
             current = self.ledger.codex_runtime()
@@ -522,6 +624,7 @@ class CodexRunController:
                 self._activity_update(
                     self.ledger.automation(), state="failed", stage="failed", message=detail
                 )
+                self._schedule_release()
 
     def _activity_update(self, automation: dict[str, Any], **changes: Any) -> None:
         run_id = str(automation.get("activity_run_id") or "")
@@ -567,4 +670,7 @@ class CodexRunController:
         }
 
     def close(self) -> None:
-        self.client.close()
+        with self._run_lock:
+            self.client.close()
+        if self._release_thread and self._release_thread is not threading.current_thread():
+            self._release_thread.join(timeout=5)

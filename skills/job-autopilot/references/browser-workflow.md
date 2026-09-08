@@ -47,6 +47,6 @@ After each section, inspect the visible values and validation errors. Use labels
 Read `settings` immediately before the final click because the user may change the policy in the dashboard.
 
 - `review`: stop with the complete form visible and request confirmation.
-- `automatic`: compare the exact lowercase hostname with `allowed_domains`. A subdomain is allowed only when it exactly matches an entry or the entry intentionally starts with `*.` and its suffix matches. This mode may automatically advance an allowlisted application to the final review state.
+- `automatic`: run `<plugin-root>/scripts/job-autopilot policy-check "<current-url>"` and use its `automatic` result. Rules match the entire hostname, case-insensitively: `*` allows all websites, `*.example.com` allows subdomains but not the bare domain, `?` matches one character, and `re:` introduces a regular expression. Use the shared checker rather than interpreting rules yourself. This mode may automatically advance a matched application to the final review state.
 - In every mode, ask once immediately before the final job-application submission. Login, OTP entry, profile filling and resume upload within that authorized application do not need separate confirmations.
 - Pause on new declarations, unknown answers, CAPTCHA, fees, assessments, referrals, or any action beyond submitting the application itself.

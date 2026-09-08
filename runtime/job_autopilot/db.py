@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Iterator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from .policy import check_domain, normalize_rule
+
 
 VALID_STATUSES = {
     "discovered",
@@ -59,6 +61,19 @@ JOB_DIRECTION_TERMS = {
         "计算机", "软件", "网络", "信息安全", "数据", "算法", "人工智能", "AI", "通信",
         "云计算", "系统",
     ],
+    "backend": ["后端", "服务端", "后台开发", "Java", "Golang", "Python开发", "C++开发"],
+    "frontend": ["前端", "Web开发", "前端开发", "React", "Vue", "JavaScript", "TypeScript"],
+    "fullstack": ["全栈", "全端", "Full Stack", "Fullstack"],
+    "algorithm": ["算法", "机器学习", "深度学习", "自然语言", "NLP", "计算机视觉", "推荐系统"],
+    "data": ["数据开发", "数据分析", "数据科学", "数据工程", "大数据", "数据仓库", "数据库", "数仓"],
+    "mobile": ["客户端", "移动开发", "Android", "iOS开发", "鸿蒙", "HarmonyOS", "Flutter"],
+    "qa": ["测试开发", "软件测试", "质量保障", "自动化测试", "测试工程师"],
+    "infra": ["运维", "SRE", "DevOps", "云计算", "云原生", "基础架构", "分布式", "中间件"],
+    "security": ["信息安全", "网络安全", "安全开发", "安全工程师", "渗透测试", "密码学"],
+    "embedded": ["嵌入式", "固件", "驱动开发", "单片机", "物联网", "机器人", "自动驾驶"],
+    "hardware": ["硬件", "芯片", "集成电路", "半导体", "FPGA", "IC设计", "数字电路"],
+    "game": ["游戏", "Unity", "Unreal", "引擎开发", "图形学", "图形渲染"],
+    "product": ["产品经理", "产品策划", "产品运营", "用户研究", "交互设计", "用户体验"],
 }
 
 TRACKING_QUERY_KEYS = {
@@ -75,6 +90,7 @@ TRACKING_QUERY_KEYS = {
 DEFAULT_SETTINGS = {
     "submission_mode": "review",
     "allowed_domains": [],
+    "codex_project_path": "",
     "login_method": "phone_otp",
     "autofill_profile_phone": True,
     "read_otp_via_adb": True,
@@ -1268,7 +1284,16 @@ class Ledger:
         domains = current.get("allowed_domains", [])
         if not isinstance(domains, list):
             raise ValueError("allowed_domains must be a list")
-        current["allowed_domains"] = sorted({str(d).strip().lower() for d in domains if str(d).strip()})
+        if any(not isinstance(d, str) for d in domains):
+            raise ValueError("allowed_domains must contain strings")
+        current["allowed_domains"] = sorted({normalize_rule(d) for d in domains if d.strip()})
+        project = str(current.get("codex_project_path") or "").strip()
+        if project:
+            path = Path(project).expanduser()
+            if not path.is_absolute() or not path.is_dir():
+                raise ValueError("项目目录必须是本机已存在的绝对路径")
+            project = str(path.resolve())
+        current["codex_project_path"] = project
         if current.get("login_method") != "phone_otp":
             raise ValueError("login_method must be phone_otp")
         for key in (
@@ -1280,3 +1305,8 @@ class Ledger:
             if not isinstance(current.get(key), bool):
                 raise ValueError(f"{key} must be a boolean")
         return self.set_kv("settings", current)
+
+    def check_domain_policy(self, url: str) -> dict[str, Any]:
+        settings = self.settings()
+        result = check_domain(url, settings["allowed_domains"])
+        return {**result, "automatic": result["allowed"] and settings["submission_mode"] == "automatic"}

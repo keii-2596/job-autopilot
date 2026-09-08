@@ -16,6 +16,7 @@ class FakeClient:
         self.running = False
         self.requests: list[tuple[str, dict]] = []
         self.responses: list[tuple[int | str, dict]] = []
+        self.projects = []
 
     def start(self) -> None:
         self.running = True
@@ -24,6 +25,8 @@ class FakeClient:
         self.requests.append((method, params))
         if method == "thread/start":
             return {"thread": {"id": "thread-1"}}
+        if method == "project/list":
+            return {"data": self.projects}
         if method == "thread/resume":
             return {"thread": {"id": params["threadId"]}}
         if method == "turn/start":
@@ -46,7 +49,9 @@ class CodexRunControllerTests(unittest.TestCase):
             "# test skill", encoding="utf-8"
         )
         self.ledger = Ledger(self.root / "state.db")
+        self.ledger.update_settings({"codex_project_path": str(self.root)})
         self.client = FakeClient()
+        self.client.projects = [{"id": "project-1", "name": "Test", "roots": [{"path": str(self.root)}]}]
         self.controller = CodexRunController(self.ledger, self.root, self.client)
 
     def tearDown(self) -> None:
@@ -89,6 +94,8 @@ class CodexRunControllerTests(unittest.TestCase):
         self.assertIn(automation["activity_run_id"], turn_params["input"][0]["text"])
         self.assertEqual(turn_params["input"][1]["type"], "skill")
         self.assertTrue(turn_params["sandboxPolicy"]["networkAccess"])
+        created = next(params for method, params in self.client.requests if method == "thread/start")
+        self.assertEqual(created["projectId"], "project-1")
         activity = self.ledger.get_activity(automation["activity_run_id"])
         self.assertEqual(activity["state"], "running")
 
@@ -104,8 +111,12 @@ class CodexRunControllerTests(unittest.TestCase):
         methods = [method for method, _ in self.client.requests]
         self.assertIn("thread/resume", methods)
         turn_params = next(params for method, params in self.client.requests if method == "turn/start")
-        self.assertEqual(turn_params["input"][0]["text"], "只看上海的 Agent 校招岗位")
+        self.assertEqual(turn_params["input"][0]["text"], "$job-autopilot\n只看上海的 Agent 校招岗位")
         self.assertEqual(turn_params["input"][1]["type"], "skill")
+        self.assertEqual(turn_params["cwd"], str(self.root.resolve()))
+        resumed = next(params for method, params in self.client.requests if method == "thread/resume")
+        self.assertEqual(resumed["cwd"], str(self.root.resolve()))
+        self.assertIn(("thread/metadata/update", {"threadId": "thread-existing", "projectId": "project-1"}), self.client.requests)
 
     @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
     def test_message_during_active_turn_uses_turn_steer(self, _which) -> None:
@@ -119,7 +130,49 @@ class CodexRunControllerTests(unittest.TestCase):
         method, params = self.client.requests[-1]
         self.assertEqual(method, "turn/steer")
         self.assertEqual(params["expectedTurnId"], "turn-1")
-        self.assertEqual(params["input"], [{"type": "text", "text": "再排除测试岗位"}])
+        self.assertEqual(params["input"], [{"type": "text", "text": "$job-autopilot\n再排除测试岗位"}])
+
+    def test_explicit_skill_is_not_duplicated(self):
+        text = "$job-autopilot 请继续"
+        self.assertEqual(self.controller._turn_params("thread-1", text)["input"][0]["text"], text)
+
+    def test_release_interrupts_and_closes_but_keeps_thread(self):
+        self.client.running = True
+        self.ledger.set_codex_runtime(state="running", thread_id="thread-1", turn_id="turn-1")
+        status = self.controller.release()
+        self.assertEqual(status["state"], "released")
+        self.assertFalse(status["connected"])
+        self.assertEqual(status["thread_id"], "thread-1")
+        self.assertIn(("turn/interrupt", {"threadId": "thread-1", "turnId": "turn-1"}), self.client.requests)
+
+    def test_completed_turn_releases_connection(self):
+        self.client.running = True
+        self.ledger.set_codex_runtime(state="running", thread_id="thread-1")
+        self.controller._handle_message({"method": "turn/completed", "params": {"turn": {"status": "completed"}}})
+        self.controller._release_thread.join(2)
+        self.assertFalse(self.client.running)
+        self.assertEqual(self.ledger.codex_runtime()["state"], "completed")
+
+    def test_retryable_error_keeps_active_turn(self):
+        self.client.running = True
+        self.ledger.set_codex_runtime(state="running", thread_id="thread-1")
+        self.controller._handle_message({"method": "error", "params": {"willRetry": True, "message": "retrying"}})
+        self.assertEqual(self.ledger.codex_runtime()["state"], "running")
+        self.assertTrue(self.client.running)
+
+    @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
+    def test_locked_thread_does_not_silently_create_another(self, _which):
+        self.ledger.set_codex_runtime(state="released", thread_id="thread-existing")
+        original = self.client.request
+        def request(method, params, timeout=30):
+            if method == "thread/resume":
+                raise RuntimeError("session is in use")
+            return original(method, params, timeout)
+        with patch.object(self.client, "request", side_effect=request):
+            self.controller.send_message("继续")
+            self.wait_for_runtime_state("failed")
+        self.assertEqual(self.ledger.codex_runtime()["thread_id"], "thread-existing")
+        self.assertNotIn("thread/start", [method for method, _ in self.client.requests])
 
     @patch("job_autopilot.codex_bridge.shutil.which", return_value="/usr/bin/codex")
     def test_message_waits_for_pending_confirmation(self, _which) -> None:

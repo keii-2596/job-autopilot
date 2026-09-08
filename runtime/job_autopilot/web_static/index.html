@@ -35,7 +35,6 @@
           <h1 id="page-title">今天继续向前。</h1>
         </div>
         <div class="top-actions">
-          <a class="button ghost" href="/embedded" target="_blank" rel="noopener">嵌入式预览</a>
           <button class="button ghost" id="refresh-button">刷新</button>
           <button class="button ghost" id="add-button">＋ 记录岗位</button>
           <button class="button primary" id="autopilot-button"><span class="button-status-dot"></span><span id="autopilot-button-label">启动 Autopilot</span></button>
@@ -59,14 +58,15 @@
         <article class="codex-chat panel">
           <div class="codex-chat-heading">
             <div><p class="eyebrow">CODEX CONVERSATION</p><h2>直接和 Codex 对话</h2></div>
-            <span class="codex-connection" id="codex-connection">正在连接</span>
+            <div class="codex-chat-actions"><span class="codex-connection" id="codex-connection">正在连接</span><button type="button" class="button ghost" id="codex-release-button" disabled>移交桌面</button></div>
           </div>
           <div class="codex-reply" id="codex-reply" aria-live="polite">你可以从这里下达找岗、筛选、投递和资料整理指令。</div>
           <form class="codex-chat-form" id="codex-chat-form">
-            <textarea id="codex-chat-input" rows="2" maxlength="8000" placeholder="例如：只看上海和杭州的 Agent / 后端校招岗位，并把合适的加入待投递"></textarea>
+            <textarea id="codex-chat-input" aria-label="发送给 Codex 的消息" rows="2" maxlength="8000" placeholder="例如：只看上海和杭州的 Agent / 后端校招岗位，并把合适的加入待投递"></textarea>
             <button class="button primary" id="codex-send-button" type="submit">发送给 Codex</button>
           </form>
-          <small class="codex-chat-note">消息会进入同一个 Job Autopilot 任务；运行中发送会成为补充指令。敏感信息和最终提交仍会单独向你确认。</small>
+          <small class="codex-chat-note"><span class="skill-tag">$job-autopilot · 自动携带</span>消息会进入同一个任务；运行中可追加指令。点击“移交桌面”会暂停本轮并释放会话，随后可在桌面点击“重试”继续。</small>
+          <small class="codex-chat-note" id="codex-project-copy"></small>
         </article>
         <div class="hero-grid">
           <article class="hero-card">
@@ -119,6 +119,19 @@
                 <option value="agent">Agent / AI</option>
                 <option value="development">开发 / 后端</option>
                 <option value="computer">计算机相关</option>
+                <option value="backend">后端 / 服务端</option>
+                <option value="frontend">前端 / Web</option>
+                <option value="fullstack">全栈开发</option>
+                <option value="algorithm">算法 / 机器学习</option>
+                <option value="data">数据 / 大数据 / 数据库</option>
+                <option value="mobile">客户端 / 移动开发</option>
+                <option value="qa">测试 / 质量保障</option>
+                <option value="infra">运维 / 云原生 / 基础架构</option>
+                <option value="security">网络 / 信息安全</option>
+                <option value="embedded">嵌入式 / 机器人</option>
+                <option value="hardware">硬件 / 芯片</option>
+                <option value="game">游戏 / 图形引擎</option>
+                <option value="product">产品 / 交互 / 用户体验</option>
                 <option value="">全部岗位</option>
               </select>
               <input id="source-job-query" type="search" placeholder="搜索公司、岗位或行业">
@@ -221,10 +234,12 @@
           </article>
           <article class="panel policy-panel">
             <p class="eyebrow">GUARDRAILS</p><h2>自动推进白名单</h2>
-            <p>每行一个招聘网站域名。允许的网站可自动进行到最终确认页；留空时所有岗位都会停在提交前。</p>
-            <textarea id="allowed-domains" rows="8" placeholder="talent.didiglobal.com&#10;zhaopin.meituan.com"></textarea>
+            <p>每行一条规则。<code>*</code> 表示所有网站，<code>*.example.com</code> 表示子域名，也支持 <code>re:^jobs\d+\.example\.com$</code> 这样的正则。匹配对象为完整域名。</p>
+            <textarea id="allowed-domains" rows="6" aria-label="自动推进白名单" placeholder="*&#10;*.example.com&#10;re:^jobs\d+\.example\.com$"></textarea>
             <button class="button dark" id="save-policy">保存策略</button>
+            <form id="policy-check-form" class="policy-check-form"><label><span>检查已保存的规则</span><input id="policy-check-url" placeholder="https://jobs.example.com" required></label><button type="submit" class="button ghost">检查网站</button><small id="policy-check-result" role="status"></small></form>
             <div class="privacy-note"><strong>必须由你确认</strong><span>最终提交前确认一次；缺少真实资料或页面要求人工验证时，再请你处理。</span></div>
+            <form id="codex-project-form" class="project-settings"><h2>网页会话所属项目</h2><p>选择 Codex 中已有项目，下一次网页发送或启动时生效。</p><button type="button" class="button ghost" id="load-codex-projects">选择已有项目</button><label id="codex-project-picker-label" hidden><span>已有项目</span><select id="codex-project-picker" aria-label="已有项目"></select></label><label><span>项目目录</span><input id="codex-project-path" placeholder="选择项目后自动填入" autocomplete="off"></label><button class="button dark" type="submit">保存项目归属</button><small id="codex-project-result" role="status"></small></form>
           </article>
         </div>
       </section>

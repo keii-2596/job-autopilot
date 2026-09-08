@@ -171,6 +171,9 @@ def build_parser() -> argparse.ArgumentParser:
     settings_set = sub.add_parser("settings-set", help="Update submission policy")
     settings_set.add_argument("--submission-mode", choices=["review", "automatic"])
     settings_set.add_argument("--allowed-domain", action="append")
+    settings_set.add_argument("--codex-project-path")
+    policy_check = sub.add_parser("policy-check", help="Check automatic advance rules for a website")
+    policy_check.add_argument("url")
 
     site_login = sub.add_parser("site-login", help="Remember a successful website login")
     site_login.add_argument("--url", required=True)
@@ -371,7 +374,11 @@ def main(argv: list[str] | None = None) -> int:
                 changes["submission_mode"] = args.submission_mode
             if args.allowed_domain is not None:
                 changes["allowed_domains"] = args.allowed_domain
+            if args.codex_project_path is not None:
+                changes["codex_project_path"] = args.codex_project_path
             emit(ledger.update_settings(changes))
+        elif args.command == "policy-check":
+            emit(ledger.check_domain_policy(args.url))
         elif args.command == "site-login":
             ledger.mark_site_login(args.url, args.method)
             emit({"saved": True, "url": args.url, "method": args.method})

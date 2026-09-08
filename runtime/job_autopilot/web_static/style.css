@@ -76,7 +76,7 @@ main { padding: 34px 44px 60px; min-width: 0; }
 .approval-form { display: grid; gap: 11px; }.approval-question { display: grid; gap: 6px; }.approval-question > span { font-size: 11px; font-weight: 750; }.approval-question small { color: #806a45; font-size: 10px; line-height: 1.45; }.approval-options { display: flex; flex-wrap: wrap; gap: 7px; }.approval-option { width: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid rgba(114,91,53,.2); border-radius: 10px; background: rgba(255,255,255,.6); color: #38260d; font-size: 11px; }.approval-option input { width: auto; margin: 0; }.approval-actions { display: flex; justify-content: flex-end; gap: 8px; }.button.approve { color: white; background: #8a6418; }.button.decline { color: #6b351d; background: #f5ded1; }
 
 .codex-chat { margin-bottom: 18px; padding: 21px 23px; }
-.codex-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.codex-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
 .codex-chat-heading h2 { margin: 0; font: 500 23px/1.2 Georgia, "Songti SC", serif; }
 .codex-connection { flex: 0 0 auto; padding: 6px 9px; color: var(--forest-2); background: #e7eee9; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
 .codex-connection.is-connected { color: var(--forest); background: var(--lime); }
@@ -86,6 +86,12 @@ main { padding: 34px 44px 60px; min-width: 0; }
 .codex-chat-form textarea { width: 100%; min-height: 50px; resize: vertical; padding: 12px 13px; color: var(--ink); background: white; border: 1px solid var(--line); border-radius: 12px; outline: none; }
 .codex-chat-form textarea:focus { border-color: var(--forest-2); box-shadow: 0 0 0 3px rgba(36,88,68,.1); }
 .codex-chat-note { display: block; margin-top: 10px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.codex-chat-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.skill-tag { display: inline-block; color: var(--forest-2); background: #e7eee9; border-radius: 6px; padding: 2px 6px; margin-right: 6px; }
+#codex-project-copy { overflow-wrap: anywhere; }
+.policy-check-form, .project-settings { display: grid; gap: 12px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.policy-check-form small, .project-settings small { color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
+.project-settings input { min-width: 0; width: 100%; }
 
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(270px, .7fr); gap: 18px; }
 .hero-card { position: relative; min-height: 245px; overflow: hidden; color: white; border-radius: 24px; padding: 32px 34px; background: linear-gradient(135deg, #183e30, #0d2a20); box-shadow: var(--shadow); display: flex; justify-content: space-between; }
@@ -110,7 +116,8 @@ main { padding: 34px 44px 60px; min-width: 0; }
 .mode-card p { font-size: 13px; min-height: 40px; }
 .mode-card small { display: block; border-top: 1px solid var(--line); padding-top: 13px; font-size: 10px; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 20px 0 17px; font-size: 13px; font-weight: 750; }
-.switch-row input { position: absolute; opacity: 0; }
+.switch-row { position: relative; }
+.switch-row input { position: absolute; opacity: 0; left: 0; top: 0; width: 1px; height: 1px; }
 .switch { width: 44px; height: 24px; padding: 3px; border-radius: 999px; background: #cdd2ce; margin-left: auto; transition: .2s; }
 .switch::before { content: ""; display: block; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,.2); transition: .2s; }
 .switch-row input:checked + .switch { background: var(--forest-2); }

@@ -190,7 +190,7 @@ description: >-
 6. 填完后检查必填项、联系方式、教育经历、岗位名称、附件和隐私/诚信声明。
 7. 根据提交策略处理：
    - `review`：更新为 `ready_for_review`，展示页面状态并等用户确认最终提交。
-   - `automatic`：仅当当前域名在 `allowed_domains` 中，且页面无未知问题、CAPTCHA 或额外声明时，自动推进到 `ready_for_review`。
+   - `automatic`：运行 `<plugin-root>/scripts/job-autopilot policy-check "<当前网址>"`，只有返回 `automatic=true` 且页面无未知问题、CAPTCHA 或额外声明时，自动推进到 `ready_for_review`。白名单支持 `*`（所有网站）、`*.example.com`（子域名）、`?`（单个字符）和 `re:` 开头的完整域名正则；以命令结果为准，不自行解释规则。
    - 同一岗位的登录、手机号验证码、资料填写和简历上传不单独请求确认；只在点击最终提交前进行一次即时确认。
 8. 只有看到明确成功页面、申请编号或成功提示后才能更新为 `submitted`，并用 `--confirmation-ref` 保存非敏感的申请编号或截图路径。
 9. 失败时更新为 `failed`，备注真实错误和可恢复位置；不要反复提交。

@@ -122,10 +122,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._json(self.ledger.profile_import())
             elif path == "/api/settings":
                 self._json(self.ledger.settings())
+            elif path == "/api/policy/check":
+                self._json(self.ledger.check_domain_policy(str(query.get("url", [""])[0])))
             elif path == "/api/automation":
                 self._json(self.ledger.automation())
             elif path == "/api/codex":
                 self._json(self.codex.status())
+            elif path == "/api/codex/projects":
+                self._json(self.codex.projects())
             elif path == "/api/activity":
                 self._json(self.ledger.activity_snapshot())
             elif path == "/api/source-jobs/summary":
@@ -189,6 +193,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 )
             elif path == "/api/codex/message":
                 self._json(self.codex.send_message(str(body.get("message") or "")), 202)
+            elif path == "/api/codex/release":
+                self._json(self.codex.release())
             elif path == "/api/profile/resume-request":
                 profile_import = self.ledger.request_profile_import(
                     str(body.get("resume_path") or ""), source="web_app_server"

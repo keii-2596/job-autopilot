@@ -200,7 +200,9 @@ function renderAutomation() {
   const automation = state.automation || {};
   const runtime = state.codex || {};
   const activity = state.activity?.current;
-  const run = activity || (runtime.state ? runtime : automation);
+  const runtimeActive = ["starting", "running", "awaiting_input"].includes(runtime.state);
+  const runtimeRecent = runtime.updated_at && (Date.parse(runtime.updated_at) >= (Date.parse(activity?.updated_at || "") || 0));
+  const run = runtimeActive || runtimeRecent ? runtime : (activity || (runtime.state ? runtime : automation));
   const active = ["requested", "starting", "running", "waiting", "awaiting_input"].includes(run.state);
   const labels = {
     idle: ["尚未启动", "从这里发起找岗、继续投递或简历解析任务。"],
@@ -210,6 +212,7 @@ function renderAutomation() {
     waiting: ["需要你的确认", run.message || "确认后 Codex 会继续"],
     awaiting_input: ["需要你的确认", run.message || "确认后 Codex 会继续"],
     paused: ["任务已暂停", run.message || "可以随时继续"],
+    released: ["网页已释放会话", run.message || "可以在桌面继续"],
     completed: ["本轮已完成", run.message || "所有可执行步骤已处理"],
     failed: ["本轮需要处理", run.message || "查看错误后可重新启动"],
   };
@@ -220,7 +223,7 @@ function renderAutomation() {
   document.querySelector("#run-state-badge").textContent = String(run.state || "idle").toUpperCase();
   document.querySelector("#run-time").textContent = formatTime(run.updated_at);
   const button = document.querySelector("#autopilot-button");
-  const externalRun = Boolean(activity && active && activity.source !== "web_app_server");
+  const externalRun = Boolean(run === activity && active && activity.source !== "web_app_server");
   button.classList.toggle("is-active", active);
   button.disabled = externalRun;
   document.querySelector("#autopilot-button-label").textContent = externalRun ? "由 Codex 对话执行中" : (active ? "暂停 Autopilot" : "启动 Autopilot");
@@ -246,17 +249,21 @@ function renderCodexChat() {
     badge.className = "codex-connection";
   }
   reply.textContent = runtime.last_agent_message || runtime.message || "你可以从这里下达找岗、筛选、投递和资料整理指令。";
-  const blocked = !runtime.available || runtime.state === "awaiting_input" || runtime.state === "starting";
+  const blocked = state.sendingMessage || !runtime.available || runtime.state === "awaiting_input" || runtime.state === "starting";
   input.disabled = blocked;
   button.disabled = blocked;
   button.textContent = runtime.state === "running" ? "追加指令" : (runtime.state === "starting" ? "正在启动…" : "发送给 Codex");
+  document.querySelector("#codex-release-button").disabled = !runtime.connected || runtime.state === "starting" || state.releasing;
+  document.querySelector("#codex-project-copy").textContent = runtime.project_path ? `会话项目目录：${runtime.project_path}` : "";
 }
 
 function renderApproval() {
   const panel = document.querySelector("#codex-approval");
   const pending = state.codex?.pending_request;
   panel.hidden = !pending;
-  if (!pending) return;
+  if (!pending) { panel.dataset.requestId = ""; return; }
+  if (panel.dataset.requestId === String(pending.id)) return;
+  panel.dataset.requestId = String(pending.id);
   document.querySelector("#approval-message").textContent = pending.message || "确认后任务才能继续。";
   const form = document.querySelector("#approval-form");
   if (pending.kind === "user_input") {
@@ -331,6 +338,7 @@ function renderProfile() {
     if (field.name) field.value = state.profile[field.name] || "";
   });
   document.querySelector("#allowed-domains").value = (state.settings.allowed_domains || []).join("\n");
+  document.querySelector("#codex-project-path").value = state.settings.codex_project_path || "";
   const automatic = state.settings.submission_mode === "automatic";
   document.querySelector("#automatic-toggle").checked = automatic;
   document.querySelector("#mode-title").textContent = automatic ? "白名单自动推进" : "提交前确认";
@@ -489,7 +497,7 @@ document.querySelector("#field-form").addEventListener("submit", async (event) =
 });
 
 document.querySelector("#save-policy").addEventListener("click", async () => {
-  const domains = document.querySelector("#allowed-domains").value.split(/\s+/).map((value) => value.trim()).filter(Boolean);
+  const domains = document.querySelector("#allowed-domains").value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
   try {
     state.settings = await api("/api/settings", { method: "PUT", body: JSON.stringify({ allowed_domains: domains }) });
     renderProfile(); toast("网站白名单已保存");
@@ -518,7 +526,10 @@ document.querySelector("#codex-chat-form").addEventListener("submit", async (eve
   event.preventDefault();
   const input = document.querySelector("#codex-chat-input");
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || state.sendingMessage) return;
+  const steering = state.codex.state === "running";
+  state.sendingMessage = true;
+  renderCodexChat();
   try {
     state.codex = await api("/api/codex/message", {
       method: "POST",
@@ -526,8 +537,58 @@ document.querySelector("#codex-chat-form").addEventListener("submit", async (eve
     });
     input.value = "";
     renderAutomation();
-    toast(state.codex.state === "running" ? "补充指令已发送" : "消息已发送给 Codex");
+    toast(steering ? "补充指令已发送" : "消息已发送给 Codex");
   } catch (error) { toast(error.message); }
+  finally { state.sendingMessage = false; renderCodexChat(); }
+});
+
+document.querySelector("#codex-release-button").addEventListener("click", async () => {
+  state.releasing = true; renderCodexChat();
+  try {
+    state.codex = await api("/api/codex/release", {method: "POST", body: "{}"});
+    toast("网页已释放会话，请在桌面任务中点击重试");
+    renderAutomation();
+  } catch (error) { toast(error.message); }
+  finally { state.releasing = false; renderCodexChat(); }
+});
+
+document.querySelector("#policy-check-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const result = document.querySelector("#policy-check-result");
+  try {
+    const data = await api(`/api/policy/check?url=${encodeURIComponent(document.querySelector("#policy-check-url").value.trim())}`);
+    result.textContent = data.allowed ? `${data.hostname} 匹配 ${data.matched_rule}${data.automatic ? "，可自动推进" : "；当前未开启自动推进"}` : `${data.hostname} 未匹配白名单`;
+  } catch (error) { result.textContent = error.message; }
+});
+
+document.querySelector("#codex-project-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const result = document.querySelector("#codex-project-result");
+  try {
+    state.settings = await api("/api/settings", {method: "PUT", body: JSON.stringify({codex_project_path: document.querySelector("#codex-project-path").value.trim()})});
+    state.codex = await api("/api/codex"); renderCodexChat();
+    result.textContent = "已保存，下次网页发起任务时生效";
+  } catch (error) { result.textContent = error.message; }
+});
+
+document.querySelector("#load-codex-projects").addEventListener("click", async () => {
+  const result = document.querySelector("#codex-project-result");
+  try {
+    const projects = await api("/api/codex/projects");
+    const picker = document.querySelector("#codex-project-picker");
+    picker.replaceChildren(new Option("选择一个项目…", ""));
+    for (const project of projects) {
+      for (const root of project.roots || []) {
+        picker.add(new Option(project.name + (project.roots.length > 1 ? ` · ${root.path}` : ""), root.path));
+      }
+    }
+    picker.value = document.querySelector("#codex-project-path").value;
+    document.querySelector("#codex-project-picker-label").hidden = false;
+    result.textContent = projects.length ? "选择项目后点击保存" : "请先在 Codex 桌面添加项目";
+  } catch (error) { result.textContent = error.message; }
+});
+document.querySelector("#codex-project-picker").addEventListener("change", event => {
+  if (event.target.value) document.querySelector("#codex-project-path").value = event.target.value;
 });
 
 document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
