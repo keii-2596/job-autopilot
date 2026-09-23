@@ -768,6 +768,1098 @@
     ]
   },
   {
+    "id": 5212,
+    "source": "baigua",
+    "source_key": "cmubm8gma00bgjti02trr0sxl",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "沃格光电",
+    "company_type": "民企",
+    "industry": "电子/半导体/芯片/集成电路/消费电子/光学光电/计算机硬件",
+    "title": "研发&技术类 智能制造类 营销&职能类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/yKPrxz8bLLp7f1Xsq48FpA",
+    "apply_url": "https://wgtechjx.zhiye.com/campus/jobs",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "dca32690cfb3d8fb0749580a936c422ae3dc985365406cabb4fca2b066c8bce6",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "研发&技术类 智能制造类 营销&职能类"
+    ],
+    "locations": [
+      "广东东莞",
+      "江西新余",
+      "湖北天门",
+      "四川成都"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5211,
+    "source": "baigua",
+    "source_key": "cmubm8gma00bfjti03bo6twte",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "盛路通信",
+    "company_type": "民企",
+    "industry": "通信运营/通信设备/网络通讯/5G/光纤光缆",
+    "title": "博士专家 高级射频工程师 天线研发工程师 雷达系统工程师 射频微波与电路工程师 数字硬件与FPGA工程师 上位机软件工程师 雷达测试工程师 结构工程师 营销储备岗 管培生 微波工程师 FPGA工程师 工艺工程师 管培生",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/jND7qBakUR664LBpKKtk2g",
+    "apply_url": "https://mp.weixin.qq.com/s/jND7qBakUR664LBpKKtk2g",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "fd76adf0a07153df460ccaf4ce384dc19d2f2d1d24d171ff2832b13c6606d6c5",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "博士专家 高级射频工程师 天线研发工程师 雷达系统工程师 射频微波与电路工程师 数字硬件与FPGA工程师 上位机软件工程师 雷达测试工程师 结构工程师 营销储备岗 管培生 微波工程师 FPGA工程师 工艺工程师 管培生"
+    ],
+    "locations": [
+      "佛山",
+      "南京",
+      "成都"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5210,
+    "source": "baigua",
+    "source_key": "cmubm8gm900bejti0e5h1bybb",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "中国市政西南院",
+    "company_type": "央国企",
+    "industry": "建筑地产/市政工程/道路桥梁建设/城乡规划/园林景观/水利环境",
+    "title": "土木工程类 环境工程类 电气类 计算机类 软件工程类 能源类 规划策划类 交通规划类 建筑类 水利类 景观类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/3jpxl-VqrnZbzwgqHLjFjA",
+    "apply_url": "https://zhaopin.ccccltd.cn/jobs?queryId=e2e5fd6b-7269-4a34-b7ec-a657f36a23f7",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "2492bf79f533a0bee81ca9a8f31c1a15321c95ef75be09b9badb9a2e897e16dc",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "土木工程类 环境工程类 电气类 计算机类 软件工程类 能源类 规划策划类 交通规划类 建筑类 水利类 景观类"
+    ],
+    "locations": [
+      "成都"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5209,
+    "source": "baigua",
+    "source_key": "cmubm8gm900bdjti0gvyxrtm7",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "灵感游戏",
+    "company_type": "民企",
+    "industry": "互联网/人工智能/软件/网络安全/游戏",
+    "title": "U3D管培生 C++管培生 测试管培生 关卡策划管培生 系统策划管培生 数值策划管培生 UI设计管培生 动画设计管培生 动效设计管培生 音频设计管培生 海外市场管培生 小语种运营管培生 海外运营管培生 游戏视频设计管培生 财务管培生 HR管培生 行政管培生",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/PQBYexx5ilXJzwYL_bmbsQ",
+    "apply_url": "https://app.mokahr.com/social-recruitment/inspiregames/144680?locale=zh-CN#/",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "cd788f1a1ba89fb601465e8e4cfc71e278142905ad1c7e23bdf9285c7b2c1781",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "U3D管培生 C++管培生 测试管培生 关卡策划管培生 系统策划管培生 数值策划管培生 UI设计管培生 动画设计管培生 动效设计管培生 音频设计管培生 海外市场管培生 小语种运营管培生 海外运营管培生 游戏视频设计管培生 财务管培生 HR管培生 行政管培生"
+    ],
+    "locations": [
+      "广州",
+      "深圳"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5208,
+    "source": "baigua",
+    "source_key": "cmubm8gm900bcjti0ak2r7gzv",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "汉高",
+    "company_type": "外企",
+    "industry": "石油石化/化学化工/化学制品/化学工程/化工勘察设计",
+    "title": "供应链管理培训生 研发管理培训生 品牌管理培训生 销售管理培训生 生产运营管理培训生",
+    "deadline_text": "2026.10.31",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/zz9pAW76FrNLKRWpm5dy2A",
+    "apply_url": "https://campus.51job.com/Henkel2027/p3.html",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "a4c62c3825833a42ab18715f90bddd1e666721caa250fca5bb0c16189e6c4ced",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "供应链管理培训生 研发管理培训生 品牌管理培训生 销售管理培训生 生产运营管理培训生"
+    ],
+    "locations": [
+      "上海",
+      "全国"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5207,
+    "source": "baigua",
+    "source_key": "cmubm8gm900bbjti0i7vuexfa",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "信华精机",
+    "company_type": "民企",
+    "industry": "机械装备/电气系统/工业自动化/智能仪器/智能制造",
+    "title": "智能制造类 专业技术类 品质管理类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/CuqQvbQf7o_UwVpUigSBIg",
+    "apply_url": "https://mp.weixin.qq.com/s/CuqQvbQf7o_UwVpUigSBIg",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "85f1ff8f75205c535275224bafcf34113dd1c20a6930ce340f180a896021495e",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "智能制造类 专业技术类 品质管理类"
+    ],
+    "locations": [
+      "广东惠州"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5206,
+    "source": "baigua",
+    "source_key": "cmubm8gm900bajti0sepj1gfp",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "开源芯片",
+    "company_type": "民企",
+    "industry": "电子/半导体/芯片/集成电路/消费电子/光学光电/计算机硬件",
+    "title": "计算机体系结构、集成电路设计、微电子等专业",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/AcwW4w-PUNb0Svf8dWNqkg",
+    "apply_url": "https://mp.weixin.qq.com/s/AcwW4w-PUNb0Svf8dWNqkg",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "48e5cd7db8e411edc6e8455ea9cdd8eebe07f90d741efa674907f7f26a7e39e8",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "计算机体系结构、集成电路设计、微电子等专业"
+    ],
+    "locations": [
+      "昆明",
+      "北京"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5205,
+    "source": "baigua",
+    "source_key": "cmubm8gm900b8jti0tdijfo73",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "海兴电力",
+    "company_type": "民企",
+    "industry": "能源/电力/燃气/核能/新能源/电力设备/能源工程",
+    "title": "软件与算法类 产品与技术营销类 研发技术类 测试与质量类 供应链类 海外营销与商务类 国内营销与商务类 职能类 数字化类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/gCgFQa52dz0uuhUilAmj8A",
+    "apply_url": "https://job.hxgroup.com/",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "68f36e96903f879293576bc8ded4ab2390dabc5c7ec54053458519747357e2f9",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "软件与算法类 产品与技术营销类 研发技术类 测试与质量类 供应链类 海外营销与商务类 国内营销与商务类 职能类 数字化类"
+    ],
+    "locations": [
+      "杭州"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5204,
+    "source": "baigua",
+    "source_key": "cmubm8gm900b7jti04v1d21dj",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "玖治科技",
+    "company_type": "民企",
+    "industry": "电子/半导体/芯片/集成电路/消费电子/光学光电/计算机硬件",
+    "title": "软件研发类 硬件研发类 产品类 设计类 供应链类 市场类 职能类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/ruJJpM6MIkjxzGm6LWDAoQ",
+    "apply_url": "https://jobs.gdjztech.com/campus",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "77e57da13f0f0cff07d34599e078be35ed006abe5c8391b4a2bd68ff1d8ebb95",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "软件研发类 硬件研发类 产品类 设计类 供应链类 市场类 职能类"
+    ],
+    "locations": [
+      "深圳",
+      "上海",
+      "东莞",
+      "中山"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5203,
+    "source": "baigua",
+    "source_key": "cmubm8gkx008zjti0t86bhw8g",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "华夏银行",
+    "company_type": "央国企",
+    "industry": "银行/国有行/商业银行/政策行/股份行/城商行/农商行/信用社",
+    "title": "管培生岗 经办岗",
+    "deadline_text": "2026.10.25",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/GJcUgble-Vhpti4XZQV61Q",
+    "apply_url": "https://wecruit.hotjob.cn/SU645b0d18bef57c0907e9fbc8/pb/school.html",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "6585c35cf4e3a9156ac4943e12ff1a5bc30cead70846d76c0cbc000e352947cf",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "管培生岗 经办岗"
+    ],
+    "locations": [
+      "全国"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5202,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02ttu89wxy5370q8",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "金光APP（中国）",
+    "company_type": "外企",
+    "industry": "造纸/纸制品/包装/包装设计加工/印刷",
+    "title": "生产制造类 技术研发类 供应链类 林务类 营销管理类 职能管理",
+    "deadline_text": "2026.12.31",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/Q5Kls55zfQX_OqzM8lOSaw",
+    "apply_url": "https://app.mokahr.com/campus-recruitment/jinguangapp/144102#/",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "228f03b7ea3fcd4f71cdace04be73f3ae9431f0e43f67c939f8f173535bb7f88",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "生产制造类 技术研发类 供应链类 林务类 营销管理类 职能管理"
+    ],
+    "locations": [
+      "上海",
+      "宁波",
+      "钦州",
+      "淄博",
+      "镇江",
+      "儋州",
+      "盐城",
+      "潍坊"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5201,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tsu89wp2cnapeu",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "研祥集团",
+    "company_type": "民企",
+    "industry": "互联网/人工智能/软件/网络安全/游戏",
+    "title": "研发类 生产支持类 市场销售类 职能类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/HmMUVBxJOJ83g0ExfU4BKA",
+    "apply_url": "https://mp.weixin.qq.com/s/HmMUVBxJOJ83g0ExfU4BKA",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "9f562bf705b97ccb323a9a23772ca6614df45ae8a25a7aa1ee1328361c1ce507",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "研发类 生产支持类 市场销售类 职能类"
+    ],
+    "locations": [
+      "深圳",
+      "北京",
+      "上海",
+      "广州",
+      "南宁",
+      "成都",
+      "杭州",
+      "苏州",
+      "南京",
+      "无锡",
+      "郑州",
+      "济南",
+      "青岛",
+      "武汉",
+      "重庆",
+      "长沙",
+      "西安"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5200,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tru89wpddh7y0i",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "泰纳瑞斯中国",
+    "company_type": "外企",
+    "industry": "机械装备/电气系统/工业自动化/智能仪器/智能制造",
+    "title": "机械 材料科学与工程 金属材料 冶金 材料成型 能源动力 电气自动化 工业工程 化工 测控 地质等工科专业",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/vSkuxLSlDJaR8_lopwGlSQ",
+    "apply_url": "https://mp.weixin.qq.com/s/vSkuxLSlDJaR8_lopwGlSQ",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "2915e4777d09b028cb4f02dee09383eabc4e74aa91279cb6e4b5debb16d73c1a",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "机械 材料科学与工程 金属材料 冶金 材料成型 能源动力 电气自动化 工业工程 化工 测控 地质等工科专业"
+    ],
+    "locations": [
+      "青岛"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5199,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tqu89wxmovanuj",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "领慧立芯",
+    "company_type": "民企",
+    "industry": "电子/半导体/芯片/集成电路/消费电子/光学光电/计算机硬件",
+    "title": "模拟IC设计工程师 数字IC验证/设计工程师 ATE测试开发工程师 模拟版图工程师 产品工程师 芯片IT工程师",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/D6Eq-Es8_G0P9rwYXE4sEw",
+    "apply_url": "https://mp.weixin.qq.com/s/D6Eq-Es8_G0P9rwYXE4sEw",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "48d97adaaa3579bf3142bf747d3f012257118ca2f47bce597b55b90ec52afa55",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "模拟IC设计工程师 数字IC验证/设计工程师 ATE测试开发工程师 模拟版图工程师 产品工程师 芯片IT工程师"
+    ],
+    "locations": [
+      "北京",
+      "上海",
+      "杭州",
+      "成都",
+      "重庆",
+      "西安",
+      "苏州",
+      "青岛"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5198,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tpu89w6zv24pze",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "斯北图",
+    "company_type": "民企",
+    "industry": "通信运营/通信设备/网络通讯/5G/光纤光缆",
+    "title": "系统工程师 射频工程师 基带工程师 FPGA工程师 信号处理算法工程师 5G协议栈开发工程师 软错误加固工程师 可靠性工程师 结构工程师",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/RJ6sppFS_u0vUHO21uKD1Q",
+    "apply_url": "https://www.zhaopin.com/companydetail/jobs-CZ543717480/",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "16710ebc65508b913226fd5e877c782611bab160ec81db53aece7a2790a89b49",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "系统工程师 射频工程师 基带工程师 FPGA工程师 信号处理算法工程师 5G协议栈开发工程师 软错误加固工程师 可靠性工程师 结构工程师"
+    ],
+    "locations": [
+      "长沙"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5197,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tou89wy0fte4v6",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "思瑞投资",
+    "company_type": "民企",
+    "industry": "金融/证券/基金/期货/保险/信托/投融资",
+    "title": "量化研究员 TMT研究员 FOF研究员",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/lLm_qxKLOT0VkVrqWxlO-A",
+    "apply_url": "https://mp.weixin.qq.com/s/lLm_qxKLOT0VkVrqWxlO-A",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "77e4fb91b234d686bb48110bc6d1d4c03b21300c73d68324e8f3134049b103d5",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "量化研究员 TMT研究员 FOF研究员"
+    ],
+    "locations": [
+      "上海"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5196,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tnu89wtjtg63zc",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "致真设备",
+    "company_type": "民企",
+    "industry": "机械装备/电气系统/工业自动化/智能仪器/智能制造",
+    "title": "研发工程师 产品工程师 机械工程师 软件工程师 销售工程师 电气工程师 工艺设备工程师 交付售后工程师 仿真工程师 博士后",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/pUzl5noPYejT_-lfV4FxaQ",
+    "apply_url": "https://mp.weixin.qq.com/s/pUzl5noPYejT_-lfV4FxaQ",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "1c86fc4ddb3debd16a19319cef3080c1ab3931ee6d79dc38fd70b2da94a582c2",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "研发工程师 产品工程师 机械工程师 软件工程师 销售工程师 电气工程师 工艺设备工程师 交付售后工程师 仿真工程师 博士后"
+    ],
+    "locations": [
+      "合肥",
+      "北京",
+      "杭州"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5195,
+    "source": "baigua",
+    "source_key": "cmuar6dhu02tmu89wczw7rs8m",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "伟明环保",
+    "company_type": "民企",
+    "industry": "节能环保/水处理/环境检测/污染防治/资源回收利用",
+    "title": "装备设计岗 技术研发岗 生产运行岗 管理职能岗",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/sH9AOMXOULoZlEGc__fpvw",
+    "apply_url": "https://mp.weixin.qq.com/s/sH9AOMXOULoZlEGc__fpvw",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "7e22e6e6dc10fe98c2af0eec35ec433f31b21bfd318b70ab7f7abe1bc2bcd4d9",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "装备设计岗 技术研发岗 生产运行岗 管理职能岗"
+    ],
+    "locations": [
+      "浙江温州"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5194,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tlu89w9ab8idl0",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "富元辰",
+    "company_type": "民企",
+    "industry": "电子/半导体/芯片/集成电路/消费电子/光学光电/计算机硬件",
+    "title": "管培生：技术方向、市场方向",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/hivpN4hUlpgHCXoViNHsFA",
+    "apply_url": "https://mp.weixin.qq.com/s/hivpN4hUlpgHCXoViNHsFA",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "5cbab0f57a9d9280427b9a8acf495d2867fdf5c27e79eaa7a9b0216ee4aa7f5f",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "管培生：技术方向、市场方向"
+    ],
+    "locations": [
+      "成都"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5193,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tku89w7fryeit3",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "爱华教育",
+    "company_type": "民企",
+    "industry": "教育培训/在线教育/学校/教育科技/职业培训",
+    "title": "青少年素养教师 教研文科/理科教师 动画设计岗",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/i7rN7UTWFLyutIcME463ew",
+    "apply_url": "https://app.mokahr.com/campus-recruitment/aihua/182170#/jobs",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "9aee197b985d77efd2674942ffab58b7bc9ad089eb3fee5b0d17e4ada2a2f179",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "青少年素养教师 教研文科/理科教师 动画设计岗"
+    ],
+    "locations": [
+      "广元",
+      "成都",
+      "重庆"
+    ],
+    "target_graduates": [
+      "2026届",
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5192,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tju89wnstxikpt",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "航天南湖公司",
+    "company_type": "央国企",
+    "industry": "高端装备与国防科技/航空航天/船舶/轨道交通装备/军工卫星",
+    "title": "电子信息与计算机类机械 机械电气与智能制造类 基础理工与工程类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/ecpMWgmeRDeNi0Aoz3tZmw",
+    "apply_url": "https://mp.weixin.qq.com/s/ecpMWgmeRDeNi0Aoz3tZmw",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "91b5634bcb83d9ca046de9cdb11f906327626f50bacc8a284019d3c1b3b53091",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "电子信息与计算机类机械 机械电气与智能制造类 基础理工与工程类"
+    ],
+    "locations": [
+      "武汉",
+      "荆州"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5191,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tiu89wq9yurfh6",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "安徽环新集团",
+    "company_type": "民企",
+    "industry": "车企/汽车零部件/智能驾驶/汽车服务/车载设备",
+    "title": "技术类 质量类  采购类 销售类 软件开发类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/7TT1_7RiER5M6kIcF4HFug",
+    "apply_url": "https://mp.weixin.qq.com/s/7TT1_7RiER5M6kIcF4HFug",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "dd924fbe29dcd8baf00d200b741c56a13c3a5b0750f6dea41753bf3df69d13ad",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "技术类 质量类  采购类 销售类 软件开发类"
+    ],
+    "locations": [
+      "安徽合肥"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5190,
+    "source": "baigua",
+    "source_key": "cmuar6dht02thu89w8xiuiajh",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "宁波华孚",
+    "company_type": "民企",
+    "industry": "进出口贸易/供应链/大宗商品贸易",
+    "title": "外贸业务员 订单管理 质量管理 产品专员 结构工程师 软件工程师 网络工程师 项目工程师 财务管理",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/vYTJh1zQUV6plIeJC9lmrA",
+    "apply_url": "https://mp.weixin.qq.com/s/vYTJh1zQUV6plIeJC9lmrA",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "97889d1d5109181ad4582bc9e08fd8d5383111e4250432e8cf9591f90b48285a",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "外贸业务员 订单管理 质量管理 产品专员 结构工程师 软件工程师 网络工程师 项目工程师 财务管理"
+    ],
+    "locations": [
+      "宁波"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5189,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tgu89wkda8jgof",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "山东渤海实业集团",
+    "company_type": "民企",
+    "industry": "农林/畜牧/养殖/饲料/农副产品/水果/农产品供应链",
+    "title": "食品类 化工类 机械类 电气类 物流类 能源动力类 环境科学类 财务管理类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/LaDvmELEd0kyN-jD_jznMA",
+    "apply_url": "https://pxhyas1r.jsjform.com/f/vr02on",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "8f84ff6531c2e2e972170afde499a1d4fa8327d86816aff0ed3ab1d61f3b853d",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "食品类 化工类 机械类 电气类 物流类 能源动力类 环境科学类 财务管理类"
+    ],
+    "locations": [
+      "山东青岛",
+      "山东滨州博兴",
+      "广西北海",
+      "广东湛江"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5188,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tfu89wlcz9kwy3",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "东呈集团",
+    "company_type": "民企",
+    "industry": "酒店/餐饮/旅游娱乐/零售百货/超市/连锁",
+    "title": "运维管培生岗位",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/0sin2cbRbUXGCGBtsf_GoA",
+    "apply_url": "https://dossen.zhiye.com/campus/jobs",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "295144b53d76755363e7282e74041ee520b054cf26a47670b7cc8493f590789c",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "运维管培生岗位"
+    ],
+    "locations": [
+      "广州",
+      "成都",
+      "武汉",
+      "长沙",
+      "南宁"
+    ],
+    "target_graduates": [
+      "2026届",
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5187,
+    "source": "baigua",
+    "source_key": "cmuar6dht02teu89w8g736v7c",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "万事达集团",
+    "company_type": "民企",
+    "industry": "建筑地产/市政工程/道路桥梁建设/城乡规划/园林景观/水利环境",
+    "title": "市场营销类 技术研发类 工程管理类 国际化类",
+    "deadline_text": "招满即止",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/naDWd84pydYO9CjaiWpMCg",
+    "apply_url": "https://wiskind.zhiye.com/campus/jobs",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "bf0858f2b10b742db07dff7bb6744fa4dd8173edc856270b6a0e33013775859a",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "市场营销类 技术研发类 工程管理类 国际化类"
+    ],
+    "locations": [
+      "滨州",
+      "镇江",
+      "上海",
+      "成都",
+      "广州",
+      "深圳",
+      "长沙",
+      "北京",
+      "石家庄",
+      "杭州",
+      "海外"
+    ],
+    "target_graduates": [
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
+    "id": 5186,
+    "source": "baigua",
+    "source_key": "cmuar6dht02tdu89wa1pl5auz",
+    "source_numeric_id": null,
+    "source_uuid": "",
+    "company_name": "主线科技",
+    "company_type": "民企",
+    "industry": "车企/汽车零部件/智能驾驶/汽车服务/车载设备",
+    "title": "定位算法工程师 决策规划控制算法工程师 感知算法工程师 端到端算法工程师 仿真开发工程师 硬件集成工程师 系统产品经理 测试工程师 感知算法工程师 感知工程优化工程师 决策规划算法工程师 控制算法工程师 底盘开发工程师 定位算法工程师 平台开发工程师 测试工程师",
+    "deadline_text": "2026.12.31",
+    "deadline_date": null,
+    "deadline_status": "",
+    "announcement_source": "",
+    "announcement_url": "https://mp.weixin.qq.com/s/eJCLm7gK38QbFR0aQnwdCQ",
+    "apply_url": "https://app.mokahr.com/social-recruitment/trunk/39504#/jobs?zhineng%5B0%5D=65948",
+    "notes": "从已登录浏览器页面同步",
+    "major_requirements": "",
+    "written_test": "",
+    "source_updated_at": "2026-09-22T00:00:00.000Z",
+    "content_hash": "88dbe13dced0cfb5d4d1e0d459f5a72671764a04747a5d6068e1c6231f21229c",
+    "first_seen_at": "2026-09-23T02:31:03+00:00",
+    "last_seen_at": "2026-09-23T02:31:03+00:00",
+    "updated_at": "2026-09-23T02:31:03+00:00",
+    "title_items": [
+      "定位算法工程师 决策规划控制算法工程师 感知算法工程师 端到端算法工程师 仿真开发工程师 硬件集成工程师 系统产品经理 测试工程师 感知算法工程师 感知工程优化工程师 决策规划算法工程师 控制算法工程师 底盘开发工程师 定位算法工程师 平台开发工程师 测试工程师"
+    ],
+    "locations": [
+      "北京"
+    ],
+    "target_graduates": [
+      "2026届",
+      "2027届"
+    ],
+    "education_levels": [],
+    "recruitment_batches": [
+      "秋招"
+    ]
+  },
+  {
     "id": 3377,
     "source": "baigua",
     "source_key": "cmu2tyllc0114mgrzogjymm78",
